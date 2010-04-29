@@ -1,5 +1,9 @@
-module ieeearith
 !> implements standard-operations with rounding control (up/down)
+!!
+!> \author Hans Peschke
+!> \date 2009 - 2010
+
+module ieeearith
 use cari
 use ieee_arithmetic
 implicit none

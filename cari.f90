@@ -1,7 +1,12 @@
+!> module with basic functions and constants for computer arithmetic
+!!
+!> \author Hans Peschke
+!> \date 2009 - 2010
+
 module cari
 implicit none
 
-! TODO
+!> TODO
 ! - output of min_denorm
 ! - there are several issues with the i/o formats, esp. with gfortran
 ! - the plan is to implement these functions also for general
@@ -16,7 +21,7 @@ implicit none
 
 public
 
-! kind parameter
+!> kind parameters
 integer, parameter :: sp = kind(0.0)
 integer, parameter :: dp = kind(0.0D0)
 integer, parameter :: ep = selected_real_kind(18, 1000)
@@ -27,43 +32,44 @@ integer, parameter :: i16 = selected_int_kind(int(log10(2.0**16)))
 integer, parameter :: i32 = selected_int_kind(int(log10(2.0**32)))
 integer, parameter :: i64 = selected_int_kind(int(log10(2.0**63)))
 
-! precision names
+!> precision names
 character(len=2), parameter, dimension(4) :: cprecs = (/ 'sp', 'dp', 'ep', 'qp' /)
 
-! global kind parameter
+!> global kind parameter
 integer, parameter :: prec = dp
 
-! basis of floating point system
+!> base of floating point system
 integer, parameter :: base = radix(0.0_prec)
 
-! needed len of a string to represent a real number with appropriate precision
-! prec2len()
+!> needed len of a string to represent a real number with appropriate precision
+!! prec2len()
 integer, parameter :: slen = 15
 integer, parameter :: dlen = 24
-integer, parameter :: elen = 43 ! gfortran??
+integer, parameter :: elen = 43
 integer, parameter :: qlen = 43
 
-! format strings for exact output (default)
-! prec2fmt()
+!> format strings for exact output (default)
+!! prec2fmt()
 character(*), parameter :: sfmt = '(E15.8)'  !  8 notw. Dezimalstellen
 character(*), parameter :: dfmt = '(E25.18)' ! 17 notw. Dezimalstellen
-character(*), parameter :: efmt = '(E31.22)' ! 20 notw. Dezimalstellen !gfortran??
+!> \bug problems with gfortran!
+character(*), parameter :: efmt = '(E31.22)' ! 20 notw. Dezimalstellen
 character(*), parameter :: qfmt = '(E43.35)' ! 35 notw. Dezimalstellen
 
-! format strings for exact output (scientific)
-! prec2fmts()
+!> format strings for exact output (scientific)
+!! prec2fmts()
 character(*), parameter :: sfmts = '(ES14.7)'  !  8 notw. Dezimalstellen
 character(*), parameter :: dfmts = '(ES23.16)' ! 17 notw. Dezimalstellen
 character(*), parameter :: efmts = '(ES26.19)' ! 20 notw. Dezimalstellen
 character(*), parameter :: qfmts = '(ES42.34)' ! 35 notw. Dezimalstellen
 
-! count of bits for exponent in the fp format
+!> count of bits for exponent in the fp format
 integer, parameter :: s_expbits = 8
 integer, parameter :: d_expbits = 11
 integer, parameter :: e_expbits = 15
 integer, parameter :: q_expbits = 15
 
-! bias-value of the exponent (~maxexp)
+!> bias-value of the exponent (~maxexp)
 integer, parameter :: sbias = 2**(s_expbits-1)-1
 integer, parameter :: dbias = 2**(d_expbits-1)-1
 integer, parameter :: ebias = 2**(e_expbits-1)-1
@@ -104,7 +110,7 @@ end interface
 
 contains 
 
-  ! returns human readable form of the floating point presision
+  !> returns human readable form of the floating point number type
   elemental function prec2char(prec) result(res)
     integer, intent(in) :: prec
     character(len=2)    :: res
@@ -250,6 +256,7 @@ contains
     end if
   end function real2str_e
 
+  !> calculates the unit in the last place of a sp fp#
   elemental function ulps(x) result(res)
     real(sp), intent(in) :: x
     real(sp)             :: res
@@ -257,6 +264,7 @@ contains
     res = real(base, kind(x))**(exponent(x) - digits(x))  
   end function ulps
 
+  !> calculates the unit in the last place of a dp fp#
   elemental function ulpd(x) result(res)
     real(dp), intent(in) :: x
     real(dp)             :: res
@@ -264,6 +272,7 @@ contains
     res = real(base, kind(x))**(exponent(x) - digits(x))  
   end function ulpd
 
+  !> calculates the unit in the last place of a ep or qp fp#
   elemental function ulpe(x) result(res)
     real(ep), intent(in) :: x
     real(ep)             :: res
@@ -281,6 +290,7 @@ contains
 !    res = real(b, kind(x))**(exponent(x) - digits(x))  
 !  end function ulpq
 
+  !> calculates the two-logarithm of a sp fp#
   pure function log2_s(x) result(res)
     real(sp), intent(in) :: x
     real(sp)             :: res
@@ -288,6 +298,7 @@ contains
     res = log(x) / log(2.0_sp)
   end function log2_s
 
+  !> calculates the two-logarithm of a dp fp#
   pure function log2_d(x) result(res)
     real(dp), intent(in) :: x
     real(dp)             :: res
@@ -295,6 +306,7 @@ contains
     res = log(x) / log(2.0_dp)
   end function log2_d
 
+  !> calculates the two-logarithm of a ep or qp fp#
   pure function log2_e(x) result(res)
     real(ep), intent(in) :: x
     real(ep)             :: res
@@ -302,6 +314,7 @@ contains
     res = log(x) / log(2.0_ep)
   end function log2_e
   
+  !> calculates the bias-value of the sp fp#-format
   pure function bias_s(x) result(res)
     real(sp), intent(in) :: x
     integer              :: res
@@ -309,6 +322,7 @@ contains
     res = 2**(expbits(x) - 1) - 1
   end function bias_s
 
+  !> calculates the bias-value of the dp fp#-format
   pure function bias_d(x) result(res)
     real(dp), intent(in) :: x
     integer              :: res
@@ -316,6 +330,7 @@ contains
     res = 2**(expbits(x) - 1) - 1
   end function bias_d
 
+  !> calculates the bias-value of the ep or qp fp#-format
   pure function bias_e(x) result(res)
     real(ep), intent(in) :: x
     integer              :: res
@@ -323,6 +338,7 @@ contains
     res = 2**(expbits(x) - 1) - 1
   end function bias_e
 
+  !> calculates the count of bits for the exponent of the sp fp#-format
   pure function sexpbits(x) result(res)
     real(sp), intent(in) :: x
     integer              :: res
@@ -330,6 +346,7 @@ contains
     res = int(1 + log2(real(maxexponent(x))))
   end function sexpbits
 
+  !> calculates the count of bits for the exponent of the dp fp#-format
   pure function dexpbits(x) result(res)
     real(dp), intent(in) :: x
     integer              :: res
@@ -337,6 +354,7 @@ contains
     res = int(1 + log2(real(maxexponent(x))))
   end function dexpbits
   
+  !> calculates the count of bits for the exponent of the ep or qp fp#-format
   pure function eexpbits(x) result(res)
     real(ep), intent(in) :: x
     integer              :: res
@@ -344,6 +362,7 @@ contains
     res = int(1 + log2(real(maxexponent(x))))
   end function eexpbits
 
+  !> calculates the relative error of appx to x in sp
   elemental function relative_error_s(x, appx) result(res)
     real(sp), intent(in) :: x, appx
     real(sp)             :: res
@@ -351,6 +370,7 @@ contains
     res = abs((appx - x) / x)
   end function relative_error_s
 
+  !> calculates the relative error of appx to x in dp
   elemental function relative_error_d(x, appx) result(res)
     real(dp), intent(in) :: x, appx
     real(dp)             :: res
@@ -358,6 +378,7 @@ contains
     res = abs((appx - x) / x)
   end function relative_error_d
 
+  !> calculates the relative error of appx to x in ep or qp
   elemental function relative_error_e(x, appx) result(res)
     real(ep), intent(in) :: x, appx
     real(ep)             :: res

@@ -1,3 +1,8 @@
+!> provides procedures to visualize fp# as their binary representation in memory
+!!
+!> \author Hans Peschke
+!> \date 2009 - 2010
+
 module viscari
 use cari
 implicit none
@@ -6,10 +11,10 @@ private
 
 public :: bin_print, get_bits, set_bit, bin_sfmt, bin_dfmt, bin_efmt
 
-character(len=1), parameter :: true  = 'x'
-character(len=1), parameter :: false = '.'
+character(len=1), parameter :: true  = 'x'  !> character for logical true
+character(len=1), parameter :: false = '.'  !> character for logical false
 
-! format strings for binary output (h ... hidden bit)
+!> format strings for binary output (h ... hidden bit)
 character(len=22), parameter :: bin_sfmt = '(1A," ", 8A," h", 23A)'
 character(len=22), parameter :: bin_dfmt = '(1A," ",11A," h", 52A)'
 character(len=22), parameter :: bin_efmt = '(1A," ",15A," h",112A)'
