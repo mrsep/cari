@@ -7,7 +7,7 @@ all: modules programs doc
 
 programs: ulp ulp_gf inspect intinq realinq
 
-modules: cari.o viscari.o ieeearith.o
+modules: cari.o viscari.o ieeearith.o ivalarith.o
 
 %.o: %.f90
 	$(FC) $(FCARGS) -c $<
