@@ -32,7 +32,7 @@ implicit none
 
 private
 
-public :: extival, ival, inf, sup, mid, get, put, operator(+), operator(-),     &
+public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),     &
           operator(*), operator(/), sqrt, operator(.isect.), operator(.ihull.), &
           operator(.sb.), operator(.sp.), operator(.dj.), operator(.in.),       &
           operator(.int.), is_bounded, is_empty, operator(==), operator(/=),    &
@@ -43,13 +43,13 @@ public :: extival, ival, inf, sup, mid, get, put, operator(+), operator(-),     
 logical :: FLAG_div_by_inner_zero
 real(prec), parameter :: up = 1.0_prec, down = -1.0_prec
 
-type extival
+type interval
   private
   logical    :: empty
   real(prec) :: inf, sup
-end type extival
+end type interval
 
-type(extival), parameter :: empty_ival = extival(.true., 1.0_prec, -1.0_prec)
+type(interval), parameter :: empty_ival = interval(.true., 1.0_prec, -1.0_prec)
 
 interface assignment (=)
   module procedure ival_assign_r
@@ -164,7 +164,7 @@ contains
   pure function ival(lower, upper) result(res)
     real(prec), intent(in)           :: lower
     real(prec), intent(in), optional :: upper
-    type(extival)                    :: res
+    type(interval)                   :: res
 
     res%empty = .false.
     res%inf = lower
@@ -177,8 +177,8 @@ contains
   end function ival
 
   pure subroutine ival_assign_r(x, p)
-    type(extival), intent(out) :: x
-    real(prec), intent(in)     :: p
+    type(interval), intent(out) :: x
+    real(prec), intent(in)      :: p
     
     x = ival(p)
   end subroutine ival_assign_r
@@ -194,22 +194,22 @@ contains
   
   ! TODO x == empty ?? 
   pure function inf_ival(x) result(res)
-    type(extival), intent(in) :: x
-    real(prec)                :: res
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
     res = x%inf
   end function inf_ival
 
   ! TODO x == empty ?? 
   pure function sup_ival(x) result(res)
-    type(extival), intent(in) :: x
-    real(prec)                :: res
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
     res = x%sup
   end function sup_ival
  
   ! TODO x == empty ?? 
   pure function mid_ival(x) result(res)
-    type(extival), intent(in) :: x
-    real(prec)                :: res
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
 
     if (is_empty(x)) then
       res = ival_nan()
@@ -223,38 +223,38 @@ contains
   end function mid_ival
 
   pure function ival_magnitude(x) result(res)
-    type(extival), intent(in) :: x
-    real(prec)                :: res
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
     res = max(abs(x%inf), abs(x%sup))
   end function ival_magnitude
 
   pure function ival_radius(x) result(res)
-    type(extival), intent(in) :: x
-    real(prec)                :: res
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
     res = 0.5_prec * abs(x%sup - x%inf)
   end function ival_radius
   
   pure function ival_diameter(x) result(res)
-    type(extival), intent(in) :: x
-    real(prec)                :: res
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
     res = abs(x%sup - x%inf)
   end function ival_diameter
   
   pure function ival_is_empty(x) result(res)
-    type(extival), intent(in) :: x
-    logical                   :: res
+    type(interval), intent(in) :: x
+    logical                    :: res
     res = x%empty .or. (x%sup < x%inf)
   end function ival_is_empty
 
   pure function ival_is_bounded(x) result(res)
-    type(extival), intent(in) :: x
-    logical                   :: res
+    type(interval), intent(in) :: x
+    logical                    :: res
     res = is_empty(x) .or. max(abs(x%inf), abs(x%sup)) < ival_inf()
   end function ival_is_bounded
 
   pure function ival_is_point(x) result(res)
-    type(extival), intent(in) :: x
-    logical                   :: res
+    type(interval), intent(in) :: x
+    logical                    :: res
     res = (x%inf == x%sup .and. .not. is_empty(x))
   end function ival_is_point
   
@@ -271,15 +271,15 @@ contains
 
   ! TODO - nearest??
   subroutine get_ival(x)
-    type(extival), intent(out) :: x
-    real(prec)                 :: i, s
+    type(interval), intent(out) :: x
+    real(prec)                  :: i, s
 
     read(*,*) i, s ! ERROR-SOURCE
     x = ival(i, s)
   end subroutine get_ival
 
   subroutine put_ival(x, pre, post)
-    type(extival), intent(in) :: x
+    type(interval), intent(in)             :: x
     character(len=*), intent(in), optional :: pre, post
 
     if (present(pre)) write(*,fmt='(A)', advance='no') pre
@@ -296,22 +296,22 @@ contains
   end subroutine put_ival
 
   pure function pos_ival(x) result(res)
-    type(extival), intent(in) :: x
-    type(extival)             :: res
+    type(interval), intent(in) :: x
+    type(interval)             :: res
     res = x
   end function pos_ival
   
   pure function neg_ival(x) result(res)
-    type(extival), intent(in) :: x
-    type(extival)             :: res
-    res = extival(x%empty, -x%sup, -x%inf)
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+    res = interval(x%empty, -x%sup, -x%inf)
   end function neg_ival
  
   function r_add_ival(p, y) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
-    real(prec)                :: id, su
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
+    real(prec)                 :: id, su
 
     if (is_empty(y)) then
       res = empty_ival
@@ -325,9 +325,9 @@ contains
   end function r_add_ival
 
   function ival_add_r(y, p) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
 
     if (is_empty(y)) then
       res = empty_ival
@@ -337,8 +337,8 @@ contains
   end function ival_add_r
   
   function ival_add_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    type(extival)             :: res
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
 
     if (is_empty(x) .or. is_empty(y)) then
       res = empty_ival
@@ -348,9 +348,9 @@ contains
   end function ival_add_ival
 
   function r_sub_ival(p, y) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
 
     if (is_empty(y)) then
       res = empty_ival
@@ -360,9 +360,9 @@ contains
   end function r_sub_ival
 
   function ival_sub_r(y, p) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
 
     if (is_empty(y)) then
       res = empty_ival
@@ -372,8 +372,8 @@ contains
   end function ival_sub_r
 
   function ival_sub_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    type(extival)             :: res
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
     
     if (is_empty(x) .or. is_empty(y)) then
       res = empty_ival
@@ -383,11 +383,11 @@ contains
   end function ival_sub_ival
 
   function r_mul_ival(p, y) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
-    real(prec)                :: id, sd
-    real(prec)                :: iu, su
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
+    real(prec)                 :: id, sd
+    real(prec)                 :: iu, su
 
     if (is_empty(y)) then
       res = empty_ival
@@ -403,11 +403,11 @@ contains
   end function r_mul_ival
 
   function ival_mul_r(y, p) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
-    real(prec)                :: id, sd
-    real(prec)                :: iu, su
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
+    real(prec)                 :: id, sd
+    real(prec)                 :: iu, su
 
     if (is_empty(y)) then
       res = empty_ival
@@ -423,10 +423,10 @@ contains
   end function ival_mul_r
 
   function ival_mul_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    type(extival)             :: res
-    real(prec)                :: iid, isd, sid, ssd
-    real(prec)                :: iiu, isu, siu, ssu
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
+    real(prec)                 :: iid, isd, sid, ssd
+    real(prec)                 :: iiu, isu, siu, ssu
 
     if (is_empty(x) .or. is_empty(y)) then
       res = empty_ival
@@ -446,26 +446,26 @@ contains
   end function ival_mul_ival
 
   function r_div_ival(p, y) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
 
     res = ival(p) / y
   end function r_div_ival
 
   function ival_div_r(y, p) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
 
     res = y / ival(p)
   end function ival_div_r
 
   function ival_div_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    type(extival)             :: res
-    real(prec)                :: iid, isd, sid, ssd
-    real(prec)                :: iiu, isu, siu, ssu
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
+    real(prec)                 :: iid, isd, sid, ssd
+    real(prec)                 :: iiu, isu, siu, ssu
 
     if (0.0_prec .int. y) then
       ! user should had better split the interval!!!
@@ -516,8 +516,8 @@ contains
 
   ! TODO sqrt of interval with negative numbers ???
   function sqrt_ival(x) result(res)
-    type(extival), intent(in) :: x
-    type(extival)             :: res
+    type(interval), intent(in) :: x
+    type(interval)             :: res
 
     if (is_empty(x)) then
       res = empty_ival
@@ -535,8 +535,8 @@ contains
   end function sqrt_ival
 
   pure function ival_intersection_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    type(extival)             :: res
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
 
     if (is_empty(x) .or. is_empty(y)) then
       res = empty_ival
@@ -546,8 +546,8 @@ contains
   end function ival_intersection_ival
   
   pure function r_ihull_r(x, y) result(res)
-    real(prec), intent(in)    :: x, y
-    type(extival)             :: res
+    real(prec), intent(in) :: x, y
+    type(interval)         :: res
 
     if (x <= y) then
       res = ival(x, y)
@@ -557,9 +557,9 @@ contains
   end function r_ihull_r
 
   pure function r_ihull_ival(p, y) result(res)
-    real(prec), intent(in)    :: p
-    type(extival), intent(in) :: y
-    type(extival)             :: res
+    real(prec), intent(in)     :: p
+    type(interval), intent(in) :: y
+    type(interval)             :: res
 
     if (is_empty(y)) then
       res = ival(p)
@@ -569,9 +569,9 @@ contains
   end function r_ihull_ival
 
   pure function ival_ihull_r(y, p) result(res)
-    type(extival), intent(in) :: y
-    real(prec), intent(in)    :: p
-    type(extival)             :: res
+    type(interval), intent(in) :: y
+    real(prec), intent(in)     :: p
+    type(interval)             :: res
 
     if (is_empty(y)) then
       res = ival(p)
@@ -581,9 +581,9 @@ contains
   end function ival_ihull_r
 
   pure function ival_ihull_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    type(extival)             :: res
-    logical                   :: x_empty
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
+    logical                    :: x_empty
 
     x_empty = is_empty(x)
     if (x_empty .or. is_empty(y)) then
@@ -598,9 +598,9 @@ contains
   end function ival_ihull_ival
  
   pure function ival_subset_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    logical                   :: res
-    logical                   :: x_empty, y_empty
+    type(interval), intent(in) :: x, y
+    logical                    :: res
+    logical                    :: x_empty, y_empty
 
     x_empty = is_empty(x); y_empty = is_empty(y)
     if (x_empty .or. is_empty(y)) then
@@ -615,9 +615,9 @@ contains
   end function ival_subset_ival
 
   pure function ival_superset_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    logical                   :: res
-    logical                   :: x_empty, y_empty
+    type(interval), intent(in) :: x, y
+    logical                    :: res
+    logical                    :: x_empty, y_empty
 
     x_empty = is_empty(x); y_empty = is_empty(y)
     if (x_empty .or. is_empty(y)) then
@@ -632,8 +632,8 @@ contains
   end function ival_superset_ival
 
   pure function ival_disjoint_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    logical                   :: res
+    type(interval), intent(in) :: x, y
+    logical                    :: res
 
     if (is_empty(x) .or. is_empty(y)) then
       res = .true.
@@ -643,9 +643,9 @@ contains
   end function ival_disjoint_ival
 
   pure function r_in_ival(p, y) result(res)
-    real(prec), intent(in)    :: p
-    type(extival), intent(in) :: y
-    logical                   :: res
+    real(prec), intent(in)     :: p
+    type(interval), intent(in) :: y
+    logical                    :: res
 
     if (is_empty(y)) then
       res = .false.
@@ -655,9 +655,9 @@ contains
   end function r_in_ival
 
   pure function r_interior_ival(p, y) result(res)
-    real(prec), intent(in)    :: p
-    type(extival), intent(in) :: y
-    logical                   :: res
+    real(prec), intent(in)     :: p
+    type(interval), intent(in) :: y
+    logical                    :: res
 
     if (is_empty(y)) then
       res = .false.
@@ -667,8 +667,8 @@ contains
   end function r_interior_ival
 
   pure function ival_interior_ival(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    logical                   :: res
+    type(interval), intent(in) :: x, y
+    logical                    :: res
 
     if (is_empty(x)) then
       res = .true.
@@ -680,12 +680,12 @@ contains
   end function ival_interior_ival
 
   subroutine inner_zero_split(x, x1, x2)
-    type(extival), intent(in)  :: x
-    type(extival), intent(out) :: x1, x2
+    type(interval), intent(in)  :: x
+    type(interval), intent(out) :: x1, x2
 
     if (0.0_prec .int. x) then
-      x1 = extival(.false., x%inf, 0.0_prec)
-      x2 = extival(.false., 0.0_prec, x%sup)
+      x1 = interval(.false., x%inf, 0.0_prec)
+      x2 = interval(.false., 0.0_prec, x%sup)
     else
       x1 = x
       x2 = empty_ival
@@ -693,8 +693,8 @@ contains
   end subroutine inner_zero_split
 
   function equal(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    logical                   :: res
+    type(interval), intent(in) :: x, y
+    logical                    :: res
 
     if (is_empty(x)) then
       res = is_empty(y)
@@ -704,8 +704,8 @@ contains
   end function equal
   
   function notequal(x, y) result(res)
-    type(extival), intent(in) :: x, y
-    logical                   :: res
+    type(interval), intent(in) :: x, y
+    logical                    :: res
 
     res = .not. equal(x,y)
   end function notequal
