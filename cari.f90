@@ -38,6 +38,12 @@ character(len=2), parameter, dimension(4) :: cprecs = (/ 'sp', 'dp', 'ep', 'qp' 
 !> global kind parameter
 integer, parameter :: prec = dp
 
+!> standard-kind fp constants
+real(prec), parameter :: zero = 0.0_prec
+real(prec), parameter :: one  = 1.0_prec
+real(prec), parameter :: two  = 2.0_prec
+real(prec), parameter :: half = 0.5_prec
+
 !> base of floating point system
 integer, parameter :: base = radix(0.0_prec)
 

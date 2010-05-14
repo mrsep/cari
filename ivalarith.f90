@@ -30,15 +30,19 @@ implicit none
 ! - Test of arithmetic with Infinity
 ! - not accurate I/O
 
+! TODO - Implement
+! d(x,y) := max(|x%inf-y%inf|, |x%sup-y%sup|)
+! minitude(x) := min{|a|, a in x}
+! order - handle the empty-interval
 private
 
-public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),     &
+public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),    &
           operator(*), operator(/), sqrt, operator(.isect.), operator(.ihull.), &
           operator(.sb.), operator(.sp.), operator(.dj.), operator(.in.),       &
           operator(.int.), is_bounded, is_empty, operator(==), operator(/=),    &
           get_flag_div_by_inner_zero, reset_flag_div_by_inner_zero,             &
           assignment(=), inner_zero_split, ival_inf, empty_ival, mag, radius,   &
-          diam
+          diam, izero, ione, itwo, ihalf, neg_ival, operator(.dot.)
 
 logical :: FLAG_div_by_inner_zero
 real(prec), parameter :: up = 1.0_prec, down = -1.0_prec
@@ -48,6 +52,12 @@ type interval
   logical    :: empty
   real(prec) :: inf, sup
 end type interval
+
+!> interval constant 
+type(interval), parameter :: izero = interval(.false., zero, zero)
+type(interval), parameter :: ione  = interval(.false., one, one)
+type(interval), parameter :: itwo  = interval(.false., two, two)
+type(interval), parameter :: ihalf = interval(.false., half, half)
 
 type(interval), parameter :: empty_ival = interval(.true., 1.0_prec, -1.0_prec)
 
@@ -151,12 +161,32 @@ interface radius
   module procedure ival_radius
 end interface
 
+interface operator (<)
+  module procedure ival_lesser_ival, ival_lesser_r, r_lesser_ival
+end interface
+
+interface operator (>)
+  module procedure ival_greater_ival, ival_greater_r, r_greater_ival
+end interface
+
+interface operator (<=)
+  module procedure ival_lessereq_ival, ival_lessereq_r, r_lessereq_ival
+end interface
+
+interface operator (>=)
+  module procedure ival_greatereq_ival, ival_greatereq_r, r_greatereq_ival
+end interface
+
 interface operator (==)
   module procedure equal
 end interface
 
 interface operator (/=)
   module procedure notequal
+end interface
+
+interface operator (.dot.)
+  module procedure ival_dot_ival
 end interface
 
 contains
@@ -679,7 +709,7 @@ contains
     end if
   end function ival_interior_ival
 
-  subroutine inner_zero_split(x, x1, x2)
+  pure subroutine inner_zero_split(x, x1, x2)
     type(interval), intent(in)  :: x
     type(interval), intent(out) :: x1, x2
 
@@ -692,7 +722,7 @@ contains
     end if
   end subroutine inner_zero_split
 
-  function equal(x, y) result(res)
+  pure function equal(x, y) result(res)
     type(interval), intent(in) :: x, y
     logical                    :: res
 
@@ -703,10 +733,123 @@ contains
     end if
   end function equal
   
-  function notequal(x, y) result(res)
+  pure function notequal(x, y) result(res)
     type(interval), intent(in) :: x, y
     logical                    :: res
 
     res = .not. equal(x,y)
   end function notequal
+
+  pure function ival_lesser_ival(l, r) result(res)
+    type(interval), intent(in) :: l, r
+    logical                    :: res
+    
+    if (is_empty(l) .and. is_empty(r)) then
+      res = .true.
+    else if (is_empty(l) .or. is_empty(r)) then
+      res = .false.
+    else
+      res = l%sup < r%inf
+    end if
+  end function ival_lesser_ival
+
+  pure function ival_lesser_r(l, r) result(res)
+    type(interval), intent(in) :: l
+    real(prec), intent(in)     :: r
+    logical                    :: res
+
+    res = l%sup < r
+  end function ival_lesser_r
+
+  pure function r_lesser_ival(l, r) result(res)
+    type(interval), intent(in) :: r
+    real(prec), intent(in)     :: l
+    logical                    :: res
+
+    res = l < r%inf
+  end function r_lesser_ival
+
+  pure function ival_greater_ival(l, r) result(res)
+    type(interval), intent(in) :: l, r
+    logical                    :: res
+
+    res = l%inf > r%sup
+  end function ival_greater_ival
+
+  pure function ival_greater_r(l, r) result(res)
+    type(interval), intent(in) :: l
+    real(prec), intent(in)     :: r
+    logical                    :: res
+
+    res = l%inf > r
+  end function ival_greater_r
+
+  pure function r_greater_ival(l, r) result(res)
+    type(interval), intent(in) :: r
+    real(prec), intent(in)     :: l
+    logical                    :: res
+
+    res = l > r%sup
+  end function r_greater_ival
+
+  pure function ival_lessereq_ival(l, r) result(res)
+    type(interval), intent(in) :: l, r
+    logical                    :: res
+
+    res = l%sup <= r%inf
+  end function ival_lessereq_ival
+
+  pure function ival_lessereq_r(l, r) result(res)
+    type(interval), intent(in) :: l
+    real(prec), intent(in)     :: r
+    logical                    :: res
+
+    res = l%sup <= r
+  end function ival_lessereq_r
+
+  pure function r_lessereq_ival(l, r) result(res)
+    type(interval), intent(in) :: r
+    real(prec), intent(in)     :: l
+    logical                    :: res
+
+    res = l <= r%inf
+  end function r_lessereq_ival
+
+  pure function ival_greatereq_ival(l, r) result(res)
+    type(interval), intent(in) :: l, r
+    logical                    :: res
+
+    res = l%inf >= r%sup
+  end function ival_greatereq_ival
+
+  pure function ival_greatereq_r(l, r) result(res)
+    type(interval), intent(in) :: l
+    real(prec), intent(in)     :: r
+    logical                    :: res
+
+    res = l%inf >= r
+  end function ival_greatereq_r
+
+  pure function r_greatereq_ival(l, r) result(res)
+    type(interval), intent(in) :: r
+    real(prec), intent(in)     :: l
+    logical                    :: res
+
+    res = l >= r%sup
+  end function r_greatereq_ival
+
+  function ival_dot_ival(l, r) result(res)
+    type(interval), intent(in), dimension(:) :: l, r
+    type(interval)                           :: res
+    integer :: i
+
+    res = izero
+    if (size(r, 1) /= size(l, 1)) then
+      ! TODO error
+    else
+      do i=1, size(r, 1)
+        res = res + l(i) * r(i)
+      end do
+    end if
+  end function ival_dot_ival
 end module ivalarith
