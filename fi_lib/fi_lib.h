@@ -35,7 +35,6 @@
 /*                                                                   */
 /*********************************************************************/
 
-#include <stdio.h>
 #include <math.h>
 #include <float.h>
 
@@ -287,39 +286,68 @@ extern double q_eqB3[5];
 extern double q_erft[7];
 
 /*********************************************************************/
-/* prototypes for interval arithmetic (basic operations)             */
+/*   Renaming of functions for standard use.                         */
+/*   Works with any F90-compiler which does not alter the external   */
+/*   names of functions.                                             */
+/*   This works for:  IBM AIX xlf90                                  */
+/*   ( R. Lohner, 20.11.97)                                          */
+/*   Modified from H. Peschke in Mai 2010                            */
+/*   use original fi_lib-1.2 file- and function names, but be        */
+/*   compatible with fxsc-names                                      */
 /*********************************************************************/
+#define q_sqr	  xrsqr
+#define q_sqrt	xrsqrt
+#define q_exp	  xrexp
+#define q_expm1	xrexpm1
+#define q_sinh	xrsinh
+#define q_cosh	xrcosh
+#define q_coth	xrcoth
+#define q_tanh	xrtanh
+#define q_log	  xrlog
+#define q_log1p	xrlog1p
+#define q_asinh	xrasinh
+#define q_acosh	xracosh
+#define q_acoth	xracoth
+#define q_atanh	xratanh
+#define q_asin	xrasin
+#define q_acos	xracos
+#define q_acot	xracot
+#define q_atan	xratan
+#define q_sin	  xrsin
+#define q_cos	  xrcos
+#define q_cot	  xrcot
+#define q_tan	  xrtan
+#define q_exp2	xrexp2
+#define q_exp10	xrexp10
+#define q_log2	xrlog2
+#define q_log10	xrlog10
 
-_PROTOTYPE(double q_min,(double x,double y));
-_PROTOTYPE(double q_max,(double x,double y));
-_PROTOTYPE(double q_abs,(double x));    
-_PROTOTYPE(interval j_abs,(interval x));    
-_PROTOTYPE(interval add_ii,(interval x, interval y));
-_PROTOTYPE(interval add_di,(double x, interval y));
-_PROTOTYPE(interval add_id,(interval x, double y));
-_PROTOTYPE(interval sub_ii,(interval x, interval y));
-_PROTOTYPE(interval sub_id,(interval x, double y));
-_PROTOTYPE(interval sub_di,(double x, interval y));
-_PROTOTYPE(interval eq_ii,(interval y));
-_PROTOTYPE(interval eq_id,(double y));
-_PROTOTYPE(interval mul_ii,(interval x, interval y));
-_PROTOTYPE(interval mul_id,(interval x, double y));
-_PROTOTYPE(interval mul_di,(double x, interval y));
-_PROTOTYPE(interval div_ii,(interval x, interval y));
-_PROTOTYPE(interval div_di,(double x, interval y));
-_PROTOTYPE(interval div_id,(interval x, double y));
-_PROTOTYPE(int in_di,(double x, interval y));
-_PROTOTYPE(int in_ii,(interval x, interval y));
-_PROTOTYPE(int ieq_ii,(interval x, interval y));
-_PROTOTYPE(int is_ii,(interval x, interval y));
-_PROTOTYPE(int ig_ii,(interval x, interval y));
-_PROTOTYPE(int ise_ii,(interval x, interval y));
-_PROTOTYPE(int ige_ii,(interval x, interval y));
-_PROTOTYPE(int dis_ii,(interval x, interval y));
-_PROTOTYPE(double q_mid,(interval x));
-_PROTOTYPE(interval hull,(interval x, interval y));
-_PROTOTYPE(interval intsec,(interval x, interval y));
-_PROTOTYPE(double q_diam,(interval x));
+#define j_exp	  xiexpo
+#define j_expm1	xiexpm1
+#define j_sinh	xisinh
+#define j_cosh	xicosh
+#define j_coth	xicoth
+#define j_tanh	xitanh
+#define j_log	  xilog
+#define j_log1p	xilog1p
+#define j_sqrt	xisqrt
+#define j_sqr	  xisqr
+#define j_asinh	xiasinh
+#define j_acosh	xiacosh
+#define j_acoth	xiacoth
+#define j_atanh	xiatanh
+#define j_asin	xiasin
+#define j_acos	xiacos
+#define j_acot	xiacot
+#define j_atan	xiatan
+#define j_sin	  xisin
+#define j_cos	  xicos
+#define j_cot	  xicot
+#define j_tan	  xitan
+#define j_exp2	xiexp2
+#define j_exp10	xiexp10
+#define j_log2	xilog2
+#define j_log10	xilog10
 
 /*********************************************************************/
 /* functions for internal use only                                   */
@@ -340,17 +368,14 @@ _PROTOTYPE(double q_sin1,(double x, long int k));
 _PROTOTYPE(double q_cos1,(double x, long int k));
 _PROTOTYPE(double q_rtrg,(double x, long int k));
 _PROTOTYPE(double q_r2tr,(double r, long int k));
-
-/*********************************************************************/
-/* functions for IO                                                  */
-/*********************************************************************/
-
-_PROTOTYPE(double scandown,());
-_PROTOTYPE(double scanup,());
-_PROTOTYPE(interval scanInterval,());
-_PROTOTYPE(void printdown,(double x));
-_PROTOTYPE(void printup,(double x));
-_PROTOTYPE(void printInterval,(interval x));
+_PROTOTYPE(double q_pred,(double x));
+_PROTOTYPE(double q_succ,(double x));
+_PROTOTYPE(double q_comp,(int s, double m, int e));
+_PROTOTYPE(double q_cmps,(double m, int e));
+_PROTOTYPE(int q_sign,(double x));
+_PROTOTYPE(double q_mant,(double x));
+_PROTOTYPE(double q_mnts,(double x));
+_PROTOTYPE(int q_expo,(double x));
 
 /*********************************************************************/
 /*               prototypes for library functions                    */
@@ -384,15 +409,6 @@ _PROTOTYPE(double q_log2,(double x));
 _PROTOTYPE(double q_lg10,(double x));
 _PROTOTYPE(double q_erf,(double x));
 _PROTOTYPE(double q_erfc,(double x));
-
-_PROTOTYPE(double q_pred,(double x));
-_PROTOTYPE(double q_succ,(double x));
-_PROTOTYPE(double q_comp,(int s, double m, int e));
-_PROTOTYPE(double q_cmps,(double m, int e));
-_PROTOTYPE(int q_sign,(double x));
-_PROTOTYPE(double q_mant,(double x));
-_PROTOTYPE(double q_mnts,(double x));
-_PROTOTYPE(int q_expo,(double x));
 
 _PROTOTYPE(interval j_exp,(interval x));
 _PROTOTYPE(interval j_expm,(interval x));

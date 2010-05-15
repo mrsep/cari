@@ -4,7 +4,7 @@
 /*********************************************************************/
 
 #include "fi_lib.h" 
-
+#include <stdio.h>
 #include <stdlib.h>   /* for exit */
 
 /* ----------- error handling for argument == NaN ---------------*/
