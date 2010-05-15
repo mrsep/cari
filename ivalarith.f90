@@ -1,4 +1,5 @@
 module ivalarith
+use, intrinsic :: iso_c_binding
 use ieee_arithmetic
 use cari
 use ieeearith
@@ -34,6 +35,7 @@ implicit none
 ! d(x,y) := max(|x%inf-y%inf|, |x%sup-y%sup|)
 ! minitude(x) := min{|a|, a in x}
 ! order - handle the empty-interval
+! use f2003 ROUND specifier for rounded read/write
 private
 
 public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),    &
@@ -42,16 +44,19 @@ public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),    
           operator(.int.), is_bounded, is_empty, operator(==), operator(/=),    &
           get_flag_div_by_inner_zero, reset_flag_div_by_inner_zero,             &
           assignment(=), inner_zero_split, ival_inf, empty_ival, mag, radius,   &
-          diam, izero, ione, itwo, ihalf, neg_ival, operator(.dot.)
+          diam, izero, ione, itwo, ihalf, neg_ival, operator(.dot.),            &
+          operator(.idiv.)
 
 logical :: FLAG_div_by_inner_zero
 real(prec), parameter :: up = 1.0_prec, down = -1.0_prec
 
-type interval
+!DEC$ OPTIONS /NOWARN
+type, bind(c) :: interval
   private
   logical    :: empty
   real(prec) :: inf, sup
-end type interval
+end type
+!DEC$ END OPTIONS
 
 !> interval constant 
 type(interval), parameter :: izero = interval(.false., zero, zero)
@@ -103,6 +108,10 @@ end interface
 
 interface operator (/)
   module procedure r_div_ival, ival_div_r, ival_div_ival
+end interface
+
+interface operator (.idiv.)
+  module procedure r_idiv_r
 end interface
 
 interface sqrt
@@ -474,6 +483,13 @@ contains
       call ieee_set_rounding_mode(ieee_nearest)
     end if
   end function ival_mul_ival
+
+  function r_idiv_r(x, y) result(res)
+    real(prec), intent(in) :: x, y
+    type(interval)         :: res
+
+    res = ival(x .divd. y, x .divu. y)
+  end function r_idiv_r
 
   function r_div_ival(p, y) result(res)
     type(interval), intent(in) :: y
