@@ -36,6 +36,7 @@ implicit none
 ! minitude(x) := min{|a|, a in x}
 ! order - handle the empty-interval
 ! use f2003 ROUND specifier for rounded read/write
+! op** for positive integer
 private
 
 public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),    &
@@ -53,25 +54,25 @@ real(prec), parameter :: up = 1.0_prec, down = -1.0_prec
 !DEC$ OPTIONS /NOWARN
 type, bind(c) :: interval
   private
-  logical    :: empty
+!  logical    :: empty
   real(prec) :: inf, sup
 end type
 !DEC$ END OPTIONS
 
 !> interval constant 
-type(interval), parameter :: izero = interval(.false., zero, zero)
-type(interval), parameter :: ione  = interval(.false., one, one)
-type(interval), parameter :: itwo  = interval(.false., two, two)
-type(interval), parameter :: ihalf = interval(.false., half, half)
+type(interval), parameter :: izero = interval(zero, zero)
+type(interval), parameter :: ione  = interval(one, one)
+type(interval), parameter :: itwo  = interval(two, two)
+type(interval), parameter :: ihalf = interval(half, half)
 
-type(interval), parameter :: empty_ival = interval(.true., 1.0_prec, -1.0_prec)
+type(interval), parameter :: empty_ival = interval(1.0_prec, -1.0_prec)
 
 interface assignment (=)
   module procedure ival_assign_r
 end interface
 
 interface ival
-  module procedure ival
+  module procedure r_ival, i_ival
 end interface
 
 interface inf
@@ -200,12 +201,12 @@ end interface
 
 contains
 
-  pure function ival(lower, upper) result(res)
+  pure function r_ival(lower, upper) result(res)
     real(prec), intent(in)           :: lower
     real(prec), intent(in), optional :: upper
     type(interval)                   :: res
 
-    res%empty = .false.
+!    res%empty = .false.
     res%inf = lower
     if (present(upper)) then
       res%sup = upper
@@ -213,7 +214,23 @@ contains
     else ! point interval
       res%sup = lower
     end if
-  end function ival
+  end function r_ival
+
+  ! TODO fp-overflow???
+  pure function i_ival(lower, upper) result(res)
+    integer, intent(in)           :: lower
+    integer, intent(in), optional :: upper
+    type(interval)                :: res
+
+!    res%empty = .false.
+    res%inf = real(lower, prec)
+    if (present(upper)) then
+      res%sup = real(upper, prec)
+      if (is_empty(res)) res = empty_ival
+    else ! point interval
+      res%sup = real(lower, prec)
+    end if
+  end function i_ival
 
   pure subroutine ival_assign_r(x, p)
     type(interval), intent(out) :: x
@@ -282,7 +299,7 @@ contains
   pure function ival_is_empty(x) result(res)
     type(interval), intent(in) :: x
     logical                    :: res
-    res = x%empty .or. (x%sup < x%inf)
+    res = x%sup < x%inf
   end function ival_is_empty
 
   pure function ival_is_bounded(x) result(res)
@@ -317,21 +334,31 @@ contains
     x = ival(i, s)
   end subroutine get_ival
 
-  subroutine put_ival(x, pre, post)
+  subroutine put_ival(x, pre, post, pdiam)
     type(interval), intent(in)             :: x
     character(len=*), intent(in), optional :: pre, post
+    logical, intent(in), optional          :: pdiam
+    character(len=prec2len(prec)) :: fm
 
+    fm = prec2fmts(prec)
     if (present(pre)) write(*,fmt='(A)', advance='no') pre
     if (is_empty(x)) then
-      write(*,*) '[-]'
+      write(*, fmt='(A)', advance='yes') '[-]'
     else if (is_point(x)) then
-      write(*,fmt='("[ ",' // prec2fmts(prec) // '," ]")') x%inf
+      write(*,fmt='("[ ",' // fm // '," ]")', advance='yes') x%inf
     else
-      write(*,fmt='("[ ",' // prec2fmts(prec) // &
-                   '", "'  // prec2fmts(prec) // &
-                   '" ]")') x%inf, x%sup
+      if (present(pdiam) .and. pdiam) then
+        write(*,fmt='("[ ",'       // fm // &
+                     ',", ",'      // fm // &
+                     ',"; diam=",' // fm // &
+                     '," ]")', advance='yes') x%inf, x%sup, diam(x)
+      else
+        write(*,fmt='("[ ",' // fm // &
+                     '", "'  // fm // &
+                     '" ]")', advance='yes') x%inf, x%sup
+      end if
     end if
-    if (present(pre)) write(*,fmt='(A)', advance='no') post 
+    if (present(post)) write(*,fmt='(A)', advance='yes') post 
   end subroutine put_ival
 
   pure function pos_ival(x) result(res)
@@ -343,7 +370,7 @@ contains
   pure function neg_ival(x) result(res)
     type(interval), intent(in) :: x
     type(interval)             :: res
-    res = interval(x%empty, -x%sup, -x%inf)
+    res = interval(-x%sup, -x%inf)
   end function neg_ival
  
   function r_add_ival(p, y) result(res)
@@ -571,7 +598,6 @@ contains
       if (x%inf < 0.0_prec) then
         res = empty_ival
       end if
-      res%empty = .false.
       call ieee_set_rounding_mode(ieee_down)
       res%inf = sqrt(x%inf)
       call ieee_set_rounding_mode(ieee_up)
@@ -730,8 +756,8 @@ contains
     type(interval), intent(out) :: x1, x2
 
     if (0.0_prec .int. x) then
-      x1 = interval(.false., x%inf, 0.0_prec)
-      x2 = interval(.false., 0.0_prec, x%sup)
+      x1 = ival(x%inf, 0.0_prec)
+      x2 = ival(0.0_prec, x%sup)
     else
       x1 = x
       x2 = empty_ival
