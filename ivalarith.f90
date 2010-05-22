@@ -32,7 +32,6 @@ implicit none
 ! - not accurate I/O
 
 ! TODO - Implement
-! d(x,y) := max(|x%inf-y%inf|, |x%sup-y%sup|)
 ! minitude(x) := min{|a|, a in x}
 ! order - handle the empty-interval
 ! use f2003 ROUND specifier for rounded read/write
@@ -167,6 +166,14 @@ interface mag
   module procedure ival_magnitude
 end interface
 
+interface min
+  module procedure ival_minitude
+end interface
+
+interface metrik
+  module procedure ival_metrik
+end interface
+
 interface radius
   module procedure ival_radius
 end interface
@@ -284,6 +291,16 @@ contains
     res = max(abs(x%inf), abs(x%sup))
   end function ival_magnitude
 
+  pure function ival_minitude(x) result(res)
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
+    if (zero .in. x) then
+      res = zero
+    else
+      res = min(abs(x%inf), abs(x%sup))
+    end if
+  end function ival_minitude
+
   pure function ival_radius(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
@@ -295,7 +312,14 @@ contains
     real(prec)                 :: res
     res = abs(x%sup - x%inf)
   end function ival_diameter
-  
+ 
+  pure function ival_metrik(x, y) result(res)
+    type(interval), intent(in) :: x, y
+    real(prec)                 :: res
+
+    res = max(abs(x%inf - y%inf), abs(x%sup - y%sup))
+  end function ival_metrik
+
   pure function ival_is_empty(x) result(res)
     type(interval), intent(in) :: x
     logical                    :: res
