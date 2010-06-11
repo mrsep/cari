@@ -1,11 +1,7 @@
-module ivalarith
-use, intrinsic :: iso_c_binding
-use ieee_arithmetic
-use cari
-use ieeearith
-implicit none
-! This module implements a complete interval arithmetic as proposed by U. Kulisch 
-! in 2008. It is motivated by a complete and inclusion-isotonic handling of 
+!> This module implements a complete interval arithmetic as proposed by U. Kulisch 
+!! in 2008. 
+
+! It is motivated by a complete and inclusion-isotonic handling of 
 ! interval division [x]/[y] with 0 in [y]. This is not defined in normal interval 
 ! arithmetic. Without this restriction, the arithmetic has to deal with infinity 
 ! bounds and the empty interval. Another problem raises in the case if 
@@ -24,18 +20,27 @@ implicit none
 ! infinity bounds IEEE-Inf is used. We use ieee_arithmetic and its rounding modes to
 ! be as exact as possible.
 
+module ivalarith
+use, intrinsic :: iso_c_binding
+use ieee_arithmetic
+use cari
+use ieeearith
+implicit none
+
 ! TODO - Problems:
 ! - How to handle the empty interval by all functions??? (inf, sup, mid, ...) 
 ! - FLAG_div_by_inner_zero --> raise IEEE-Exception div_by_zero
 ! - abs, inflate, Kulisch IVALarith functions
 ! - Test of arithmetic with Infinity
 ! - not accurate I/O
+! sqrt(ival) here???
 
 ! TODO - Implement
-! minitude(x) := min{|a|, a in x}
 ! order - handle the empty-interval
 ! use f2003 ROUND specifier for rounded read/write
 ! op** for positive integer
+! ival**r, ival**int, ival**ival
+
 private
 
 public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),    &
@@ -53,7 +58,6 @@ real(prec), parameter :: up = 1.0_prec, down = -1.0_prec
 !DEC$ OPTIONS /NOWARN
 type, bind(c) :: interval
   private
-!  logical    :: empty
   real(prec) :: inf, sup
 end type
 !DEC$ END OPTIONS
@@ -170,8 +174,8 @@ interface min
   module procedure ival_minitude
 end interface
 
-interface metrik
-  module procedure ival_metrik
+interface metric
+  module procedure ival_metric
 end interface
 
 interface radius
@@ -213,7 +217,6 @@ contains
     real(prec), intent(in), optional :: upper
     type(interval)                   :: res
 
-!    res%empty = .false.
     res%inf = lower
     if (present(upper)) then
       res%sup = upper
@@ -229,7 +232,6 @@ contains
     integer, intent(in), optional :: upper
     type(interval)                :: res
 
-!    res%empty = .false.
     res%inf = real(lower, prec)
     if (present(upper)) then
       res%sup = real(upper, prec)
@@ -255,87 +257,95 @@ contains
     FLAG_div_by_inner_zero = .false.
   end subroutine reset_flag_div_by_inner_zero
   
-  ! TODO x == empty ?? 
   pure function inf_ival(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
-    res = x%inf
+
+    if (.not. is_empty(x)) then 
+      res = x%inf
+    else
+      res = ival_nan()
+    end if
   end function inf_ival
 
-  ! TODO x == empty ?? 
   pure function sup_ival(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
-    res = x%sup
+
+    if (.not. is_empty(x)) then 
+      res = x%sup
+    else
+      res = ival_nan()
+    end if
   end function sup_ival
  
-  ! TODO x == empty ?? 
+  ! special handling of inf-bounds or empty-interval not needed because
+  ! inf(x) and sup(x) do the right job
   pure function mid_ival(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
 
-    if (is_empty(x)) then
-      res = ival_nan()
-    else if (x%inf == -ival_inf()) then
-      res = -ival_inf()
-    else if (x%sup ==  ival_inf()) then
-      res = ival_inf()
-    else
-      res = 0.5_prec * x%inf + 0.5_prec * x%sup
-    end if
+    res = 0.5_prec * inf(x) + 0.5_prec * sup(x)
   end function mid_ival
 
   pure function ival_magnitude(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
-    res = max(abs(x%inf), abs(x%sup))
+
+    res = max(abs(inf(x)), abs(sup(x)))
   end function ival_magnitude
 
   pure function ival_minitude(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
+    
     if (zero .in. x) then
       res = zero
     else
-      res = min(abs(x%inf), abs(x%sup))
+      res = min(abs(inf(x)), abs(sup(x)))
     end if
   end function ival_minitude
 
   pure function ival_radius(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
-    res = 0.5_prec * abs(x%sup - x%inf)
+
+    res = 0.5_prec * abs(sup(x) - inf(x))
   end function ival_radius
   
   pure function ival_diameter(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
-    res = abs(x%sup - x%inf)
+  
+    res = abs(sup(x) - inf(x))
   end function ival_diameter
  
-  pure function ival_metrik(x, y) result(res)
+  pure function ival_metric(x, y) result(res)
     type(interval), intent(in) :: x, y
     real(prec)                 :: res
 
-    res = max(abs(x%inf - y%inf), abs(x%sup - y%sup))
-  end function ival_metrik
+    res = max(abs(inf(x) - inf(y)), abs(sup(x) - sup(y)))
+  end function ival_metric
 
   pure function ival_is_empty(x) result(res)
     type(interval), intent(in) :: x
     logical                    :: res
+
     res = x%sup < x%inf
   end function ival_is_empty
 
   pure function ival_is_bounded(x) result(res)
     type(interval), intent(in) :: x
     logical                    :: res
+
     res = is_empty(x) .or. max(abs(x%inf), abs(x%sup)) < ival_inf()
   end function ival_is_bounded
 
+  ! [inf, inf] is not a point interval!
   pure function ival_is_point(x) result(res)
     type(interval), intent(in) :: x
     logical                    :: res
-    res = (x%inf == x%sup .and. .not. is_empty(x))
+    res = is_bounded(x) .and. (x%inf == x%sup) .and. (.not. is_empty(x))
   end function ival_is_point
   
   ! interval infinity bound
@@ -344,12 +354,13 @@ contains
     res = ieee_value(0.0_prec, ieee_positive_inf) ! res = Infinity
   end function ival_inf
  
+  ! exceptional value for empty intervals
   elemental function ival_nan() result(res)
     real(prec) :: res
     res = ieee_value(0.0_prec, ieee_quiet_nan) ! res = NaN
   end function ival_nan
 
-  ! TODO - nearest??
+  ! TODO
   subroutine get_ival(x)
     type(interval), intent(out) :: x
     real(prec)                  :: i, s
@@ -401,16 +412,11 @@ contains
     type(interval), intent(in) :: y
     real(prec), intent(in)     :: p
     type(interval)             :: res
-    real(prec)                 :: id, su
 
     if (is_empty(y)) then
       res = empty_ival
     else
-      id = p .addd. y%inf
-
-      su = p .addu. y%sup
-      
-      res = ival(id, su)
+      res = ival(p .addd. y%inf, p .addu. y%sup)
     end if
   end function r_add_ival
 
@@ -558,6 +564,7 @@ contains
     res = y / ival(p)
   end function ival_div_r
 
+  ! TODO check it and try to understand it
   function ival_div_ival(x, y) result(res)
     type(interval), intent(in) :: x, y
     type(interval)             :: res
@@ -775,13 +782,16 @@ contains
     end if
   end function ival_interior_ival
 
+  !> helper function for extended interval division
+  !! if zero is entirely in the ival, then break the 
+  !! ival in two pieces 
   pure subroutine inner_zero_split(x, x1, x2)
     type(interval), intent(in)  :: x
     type(interval), intent(out) :: x1, x2
 
-    if (0.0_prec .int. x) then
-      x1 = ival(x%inf, 0.0_prec)
-      x2 = ival(0.0_prec, x%sup)
+    if (zero .int. x) then
+      x1 = ival(x%inf, zero)
+      x2 = ival(zero, x%sup)
     else
       x1 = x
       x2 = empty_ival
