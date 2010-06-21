@@ -38,7 +38,7 @@ implicit none
 ! TODO - Implement
 ! order - handle the empty-interval
 ! use f2003 ROUND specifier for rounded read/write
-! op** for positive integer
+! op** for positive integer, even/odd exponent
 ! ival**r, ival**int, ival**ival
 
 private
@@ -48,9 +48,9 @@ public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),    
           operator(.sb.), operator(.sp.), operator(.dj.), operator(.in.),       &
           operator(.int.), is_bounded, is_empty, operator(==), operator(/=),    &
           get_flag_div_by_inner_zero, reset_flag_div_by_inner_zero,             &
-          assignment(=), inner_zero_split, ival_inf, empty_ival, mag, radius,   &
-          diam, izero, ione, itwo, ihalf, neg_ival, operator(.dot.),            &
-          operator(.idiv.)
+          assignment(=), inner_zero_split, ival_infinity, empty_ival, mag, diam,&
+          radius, izero, ione, itwo, ihalf, neg_ival, operator(.dot.),          &
+          operator(.idiv.), idiam, iradius, iinf, isup
 
 logical :: FLAG_div_by_inner_zero
 real(prec), parameter :: up = 1.0_prec, down = -1.0_prec
@@ -86,8 +86,12 @@ interface sup
   module procedure sup_ival
 end interface
 
-interface mid
-  module procedure mid_ival
+interface iinf
+  module procedure iinf_ival
+end interface
+
+interface isup
+  module procedure isup_ival
 end interface
 
 interface get
@@ -162,9 +166,21 @@ interface is_empty
   module procedure ival_is_empty
 end interface
 
+interface mid
+  module procedure ival_mid
+end interface
+
+interface imid
+  module procedure ival_imid
+end interface
+
 interface diam
   module procedure ival_diameter
-end interface diam
+end interface
+
+interface idiam
+  module procedure ival_idiameter
+end interface
 
 interface mag
   module procedure ival_magnitude
@@ -180,6 +196,10 @@ end interface
 
 interface radius
   module procedure ival_radius
+end interface
+
+interface iradius
+  module procedure ival_iradius
 end interface
 
 interface operator (<)
@@ -278,15 +298,37 @@ contains
       res = ival_nan()
     end if
   end function sup_ival
+
+  pure function iinf_ival(x) result(res)
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+
+    res = ival(inf(x))
+  end function iinf_ival
+
+  pure function isup_ival(x) result(res)
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+
+    res = ival(sup(x))
+  end function isup_ival
  
   ! special handling of inf-bounds or empty-interval not needed because
   ! inf(x) and sup(x) do the right job
-  pure function mid_ival(x) result(res)
+  pure function ival_mid(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
 
     res = 0.5_prec * inf(x) + 0.5_prec * sup(x)
-  end function mid_ival
+  end function ival_mid
+
+  function ival_imid(x) result(res)
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+
+    res = ival(half .muld. (inf(x) .addd. x%sup), &
+               half .mulu. (x%inf  .addu. x%sup))
+  end function ival_imid
 
   pure function ival_magnitude(x) result(res)
     type(interval), intent(in) :: x
@@ -310,16 +352,30 @@ contains
     type(interval), intent(in) :: x
     real(prec)                 :: res
 
-    res = 0.5_prec * abs(sup(x) - inf(x))
+    res = half * abs(sup(x) - x%inf)
   end function ival_radius
+
+  function ival_iradius(x) result(res)
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+
+    res = half * ival(abs(sup(x) .subd. x%inf), abs(x%sup .subu. x%inf))
+  end function ival_iradius
   
   pure function ival_diameter(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
   
-    res = abs(sup(x) - inf(x))
+    res = abs(sup(x) - x%inf)
   end function ival_diameter
  
+  function ival_idiameter(x) result(res)
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+  
+    res = ival(abs(sup(x) .subd. x%inf), abs(x%sup .subu. x%inf))
+  end function ival_idiameter
+
   pure function ival_metric(x, y) result(res)
     type(interval), intent(in) :: x, y
     real(prec)                 :: res
@@ -338,7 +394,7 @@ contains
     type(interval), intent(in) :: x
     logical                    :: res
 
-    res = is_empty(x) .or. max(abs(x%inf), abs(x%sup)) < ival_inf()
+    res = is_empty(x) .or. max(abs(x%inf), abs(x%sup)) < ival_infinity()
   end function ival_is_bounded
 
   ! [inf, inf] is not a point interval!
@@ -349,10 +405,10 @@ contains
   end function ival_is_point
   
   ! interval infinity bound
-  elemental function ival_inf() result(res)
+  elemental function ival_infinity() result(res)
     real(prec) :: res
     res = ieee_value(0.0_prec, ieee_positive_inf) ! res = Infinity
-  end function ival_inf
+  end function ival_infinity
  
   ! exceptional value for empty intervals
   elemental function ival_nan() result(res)
@@ -360,13 +416,25 @@ contains
     res = ieee_value(0.0_prec, ieee_quiet_nan) ! res = NaN
   end function ival_nan
 
-  ! TODO
-  subroutine get_ival(x)
+  ! TODO ERROR-SOURCE
+  ! allow get of empty intervals?
+  subroutine get_ival(x, pre, post, prompt)
     type(interval), intent(out) :: x
+    logical, optional           :: prompt
+    character(len=*), intent(in), optional :: pre, post
     real(prec)                  :: i, s
 
-    read(*,*) i, s ! ERROR-SOURCE
+    if (present(pre)) write(*,fmt='(A)', advance='yes') pre
+    if (present(prompt) .and. prompt) then
+      write(*,fmt='(A)',advance='no') 'inf= '
+      read(*,*) i
+      write(*,fmt='(A)',advance='no') 'sup= '
+      read(*,*) s
+    else
+      read(*,*) i, s ! ERROR-SOURCE
+    end if
     x = ival(i, s)
+    if (present(post)) write(*,fmt='(A)', advance='yes') post 
   end subroutine get_ival
 
   subroutine put_ival(x, pre, post, pdiam)
@@ -573,7 +641,7 @@ contains
 
     if (0.0_prec .int. y) then
       ! user should had better split the interval!!!
-      res = ival(-ival_inf(), ival_inf())
+      res = ival(-ival_infinity(), ival_infinity())
       FLAG_div_by_inner_zero = .true.
     else if (0.0_prec .in. y) then
       ! prevent div-by-zero!!! 
@@ -583,25 +651,25 @@ contains
         else if (y%inf < y%sup .and. y%sup == 0.0_prec) then
           call ieee_set_rounding_mode(ieee_down)
           sid = x%sup / y%inf
-          res = ival(sid, ival_inf())
+          res = ival(sid, ival_infinity())
         else if (0.0_prec == y%inf .and. y%inf < y%sup) then
           call ieee_set_rounding_mode(ieee_up)
           ssu = x%sup / y%sup
-          res = ival(-ival_inf(), ssu)
+          res = ival(-ival_infinity(), ssu)
         end if
       else if (0.0_prec .in. x) then
-        res = ival(-ival_inf(), ival_inf())
+        res = ival(-ival_infinity(), ival_infinity())
       else if (x%sup > 0.0_prec) then
         if (y == ival(0.0_prec)) then
           res = empty_ival
         else if (y%inf < y%sup .and. y%sup == 0.0_prec) then
           call ieee_set_rounding_mode(ieee_up)
           iiu = x%inf / y%inf
-          res = ival(-ival_inf(), iiu)
+          res = ival(-ival_infinity(), iiu)
         else if (0.0_prec == y%inf .and. y%inf < y%sup) then
           call ieee_set_rounding_mode(ieee_down)
           isd = x%inf / y%sup
-          res = ival(isd, ival_inf())
+          res = ival(isd, ival_infinity())
         end if
       end if
     else  ! 0 not in y
