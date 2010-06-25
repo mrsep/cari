@@ -30,7 +30,7 @@ implicit none
 ! TODO - Problems:
 ! - How to handle the empty interval by all functions??? (inf, sup, mid, ...) 
 ! - FLAG_div_by_inner_zero --> raise IEEE-Exception div_by_zero
-! - abs, inflate, Kulisch IVALarith functions
+! - inflate, Kulisch IVALarith functions
 ! - Test of arithmetic with Infinity
 ! - not accurate I/O
 ! sqrt(ival) here???
@@ -40,6 +40,7 @@ implicit none
 ! use f2003 ROUND specifier for rounded read/write
 ! op** for positive integer, even/odd exponent
 ! ival**r, ival**int, ival**ival
+! modular ordering: subset, value
 
 private
 
@@ -50,24 +51,26 @@ public :: interval, ival, inf, sup, mid, get, put, operator(+), operator(-),    
           get_flag_div_by_inner_zero, reset_flag_div_by_inner_zero,             &
           assignment(=), inner_zero_split, ival_infinity, empty_ival, mag, diam,&
           radius, izero, ione, itwo, ihalf, neg_ival, operator(.dot.),          &
-          operator(.idiv.), idiam, iradius, iinf, isup
+          operator(.idiv.), idiam, iradius, iinf, isup, mig, min, max, abs
 
+!> error flag -> error handling
 logical :: FLAG_div_by_inner_zero
-real(prec), parameter :: up = 1.0_prec, down = -1.0_prec
 
 !DEC$ OPTIONS /NOWARN
+!> type for real fp-intervals
 type, bind(c) :: interval
   private
   real(prec) :: inf, sup
 end type
 !DEC$ END OPTIONS
 
-!> interval constant 
+!> interval constants 
 type(interval), parameter :: izero = interval(zero, zero)
 type(interval), parameter :: ione  = interval(one, one)
 type(interval), parameter :: itwo  = interval(two, two)
 type(interval), parameter :: ihalf = interval(half, half)
 
+!> dummy interval representing the empty set
 type(interval), parameter :: empty_ival = interval(1.0_prec, -1.0_prec)
 
 interface assignment (=)
@@ -75,7 +78,7 @@ interface assignment (=)
 end interface
 
 interface ival
-  module procedure r_ival, i_ival
+  module procedure r_ival, i32_ival, i64_ival
 end interface
 
 interface inf
@@ -99,7 +102,7 @@ interface get
 end interface
 
 interface put
-  module procedure put_ival
+  module procedure put_ival, put_ivals, put_ival_metric
 end interface
 
 interface operator (+)
@@ -182,16 +185,32 @@ interface idiam
   module procedure ival_idiameter
 end interface
 
+interface abs
+  module procedure ival_abs
+end interface abs
+
 interface mag
   module procedure ival_magnitude
 end interface
 
+interface mig
+  module procedure ival_mignitude
+end interface
+
 interface min
-  module procedure ival_minitude
+  module procedure ival_min
+end interface
+
+interface max
+  module procedure ival_max
 end interface
 
 interface metric
   module procedure ival_metric
+end interface
+
+interface norm
+  module procedure ival_norm
 end interface
 
 interface radius
@@ -232,6 +251,7 @@ end interface
 
 contains
 
+  !> interval constructor for fp
   pure function r_ival(lower, upper) result(res)
     real(prec), intent(in)           :: lower
     real(prec), intent(in), optional :: upper
@@ -247,10 +267,11 @@ contains
   end function r_ival
 
   ! TODO fp-overflow???
-  pure function i_ival(lower, upper) result(res)
-    integer, intent(in)           :: lower
-    integer, intent(in), optional :: upper
-    type(interval)                :: res
+  !> interval constructor for 32-Bit Integers
+  pure function i32_ival(lower, upper) result(res)
+    integer(i32), intent(in)           :: lower
+    integer(i32), intent(in), optional :: upper
+    type(interval)                     :: res
 
     res%inf = real(lower, prec)
     if (present(upper)) then
@@ -259,7 +280,23 @@ contains
     else ! point interval
       res%sup = real(lower, prec)
     end if
-  end function i_ival
+  end function i32_ival
+
+  ! TODO fp-overflow???
+  !> interval constructor for 64-Bit Integers
+  pure function i64_ival(lower, upper) result(res)
+    integer(i64), intent(in)           :: lower
+    integer(i64), intent(in), optional :: upper
+    type(interval)                     :: res
+
+    res%inf = real(lower, prec)
+    if (present(upper)) then
+      res%sup = real(upper, prec)
+      if (is_empty(res)) res = empty_ival
+    else ! point interval
+      res%sup = real(lower, prec)
+    end if
+  end function i64_ival
 
   pure subroutine ival_assign_r(x, p)
     type(interval), intent(out) :: x
@@ -330,6 +367,13 @@ contains
                half .mulu. (x%inf  .addu. x%sup))
   end function ival_imid
 
+  pure function ival_abs(x) result(res)
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+
+    res = ival(mig(x), mag(x))
+  end function ival_abs
+
   pure function ival_magnitude(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
@@ -337,7 +381,7 @@ contains
     res = max(abs(inf(x)), abs(sup(x)))
   end function ival_magnitude
 
-  pure function ival_minitude(x) result(res)
+  pure function ival_mignitude(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
     
@@ -346,13 +390,27 @@ contains
     else
       res = min(abs(inf(x)), abs(sup(x)))
     end if
-  end function ival_minitude
+  end function ival_mignitude
 
-  pure function ival_radius(x) result(res)
+  pure function ival_max(x, y) result(res)
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
+
+    res = ival(max(inf(x), inf(y)), max(x%sup, y%sup))
+  end function ival_max
+
+  pure function ival_min(x, y) result(res)
+    type(interval), intent(in) :: x, y
+    type(interval)             :: res
+
+    res = ival(min(inf(x), inf(y)), min(x%sup, y%sup))
+  end function ival_min
+
+  function ival_radius(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
 
-    res = half * abs(sup(x) - x%inf)
+    res = half * abs(sup(x) .subu. x%inf)
   end function ival_radius
 
   function ival_iradius(x) result(res)
@@ -362,11 +420,11 @@ contains
     res = half * ival(abs(sup(x) .subd. x%inf), abs(x%sup .subu. x%inf))
   end function ival_iradius
   
-  pure function ival_diameter(x) result(res)
+  function ival_diameter(x) result(res)
     type(interval), intent(in) :: x
     real(prec)                 :: res
   
-    res = abs(sup(x) - x%inf)
+    res = abs(sup(x) .subu. x%inf)
   end function ival_diameter
  
   function ival_idiameter(x) result(res)
@@ -376,12 +434,20 @@ contains
     res = ival(abs(sup(x) .subd. x%inf), abs(x%sup .subu. x%inf))
   end function ival_idiameter
 
+  ! possbile accuracy loss in '-'
   pure function ival_metric(x, y) result(res)
     type(interval), intent(in) :: x, y
     real(prec)                 :: res
 
     res = max(abs(inf(x) - inf(y)), abs(sup(x) - sup(y)))
   end function ival_metric
+
+  pure function ival_norm(x) result(res)
+    type(interval), intent(in) :: x
+    real(prec)                 :: res
+
+    res = ival_metric(x, izero)
+  end function ival_norm
 
   pure function ival_is_empty(x) result(res)
     type(interval), intent(in) :: x
@@ -463,6 +529,41 @@ contains
     end if
     if (present(post)) write(*,fmt='(A)', advance='yes') post 
   end subroutine put_ival
+
+  subroutine put_ivals(x, pre, post, pdiam)
+    type(interval), dimension(:), intent(in) :: x
+    character(len=*), intent(in), optional   :: pre, post
+    logical, intent(in), optional            :: pdiam
+    integer :: i
+
+    if (present(pre)) write(*,fmt='(A)', advance='no') pre
+    do i=1, ubound(x,1)
+      call put_ival(x(i), pdiam=pdiam)
+    end do
+    if (present(post)) write(*,fmt='(A)', advance='yes') post 
+  end subroutine put_ivals
+
+  subroutine put_ival_metric(x, y, xname, yname, pre, post)
+    type(interval), intent(in)   :: x, y
+    character(len=*), intent(in) :: xname, yname
+    character(len=*), intent(in), optional :: pre, post
+    character(len=prec2len(prec)) :: fm
+
+    fm = prec2fmts(prec)
+    if (present(pre)) write(*,fmt='(A)', advance='no') pre
+    if (is_empty(x)) then
+      write(*, fmt='(A)', advance='yes') '[-]'
+    else if (is_point(x)) then
+      write(*,fmt='("[ ",' // fm // ',"; d(",A,",",A,")= ",' // fm // ' ]")', &
+              advance='yes') x%inf, trim(xname), trim(yname), ival_metric(x,y)       
+    else
+      write(*,fmt='("[ ",'   // fm // &
+                    ',", ",' // fm // &
+                    ',"; d(",A,",",A,")= ",' // fm // '," ]")', advance='yes') &
+                    x%inf, x%sup, trim(xname), trim(yname), ival_metric(x,y) 
+    end if
+    if (present(post)) write(*,fmt='(A)', advance='yes') post 
+  end subroutine put_ival_metric
 
   pure function pos_ival(x) result(res)
     type(interval), intent(in) :: x

@@ -1,5 +1,5 @@
 module ivaltaylor
-use cari, only : prec
+use cari, only : prec, i64
 use ivalarith
 !use fi_lib ! imported in the specific functions
 implicit none
@@ -14,13 +14,17 @@ implicit none
 ! - expo(. , .) with all combinations of types: int, r, ival, it
 ! - nth-root
 ! - for more than one variable ???
-! - evaluation of a function, only given by its finite taylor series in x0, in a
-!   point x /= x0
+! - evaluation of a function, only given by its finite taylor series in x0, 
+!   in a point x /= x0
+!   - save the original expansio point, but how does it develop through
+!   composition of it-functions???
 ! erf, erfc
+! - identity function
 
 private
 
-private :: it_si_co, it_trig, imapping, essential_order, max_essential_order, it_asin_naiv
+private :: it_si_co, it_trig, imapping, essential_order, max_essential_order,&
+         & it_asin_naiv
 
 public :: itaylor, init, order, const, expand, free, defined, get_order,     &
         & assignment(=), operator(+), operator(-), operator(*), operator(/), &
@@ -48,7 +52,7 @@ type itaylor
   logical                               :: tmp
 end type itaylor
 
-! interface to elementary interval functions implemented in fi_lib
+!> interface to elementary interval functions implemented in fi_lib
 abstract interface
   function imapping(x) result(res) bind(C)
     use ivalarith, only : interval
@@ -57,6 +61,7 @@ abstract interface
   end function imapping
 end interface
 
+!> interface to it-functions
 abstract interface 
   function itmapping(x) result(res)
     use ivalarith,  only : interval
@@ -285,7 +290,9 @@ contains
     type(itaylor), intent(in), optional :: it2
     
     if (it1%tmp .and. associated(it1%cof)) deallocate(it1%cof)
-    if (present(it2) .and. it2%tmp .and. associated(it2%cof)) deallocate(it2%cof)
+    if (present(it2) .and. it2%tmp .and. associated(it2%cof)) then
+      deallocate(it2%cof)
+    end if
   end subroutine it_tmp_free
 
   function it_defined(it) result(res)
@@ -663,7 +670,8 @@ contains
     end do
 
     do k=mino+1, ord
-      res%cof(k) = l%cof(max(0,k-or) : min(ol,k)) .dot. r%cof(min(or,k) : max(0,k-ol) : -1)
+      res%cof(k) = l%cof(max(0,k-or) : min(ol,k)) .dot.  &
+                   r%cof(min(or,k)   : max(0,k-ol) : -1)
     end do
 
     res%tmp = .true.
@@ -841,7 +849,7 @@ contains
                     ) / (itwo * res%cof(0))
 
       ke = ko+1; k = (ke / 2) ! res%cof(k_even)
-      res%cof(ke) = (res%cof(ke) - res%cof(k) * res%cof(k)                       &
+      res%cof(ke) = (res%cof(ke) - res%cof(k) * res%cof(k)               &
                                  - ival(2) * ( res%cof(1    : k-1) .dot. &
                                                res%cof(ke-1 : k+1 : -1)) &
                     ) / (itwo * res%cof(0))
@@ -857,6 +865,7 @@ contains
     call tmp_free(x)
   end function it_sqrt
 
+  !> only for testing it_sqrt
   function it_sqrt_simple(x) result(res)
     use fi_lib, only : xisqrt
     type(itaylor), intent(in) :: x
@@ -902,7 +911,8 @@ contains
       
       ke = ko+1; k = (ke / 2) ! res(k_even)
       res%cof(ke) = ival(2) * ( x%cof(max(0,ke-ox) : k-1) .dot. &
-                                x%cof(min(ox,ke)   : k+1 : -1)) + (x%cof(k)) * x%cof(k)
+                                x%cof(min(ox,ke)   : k+1 : -1)) &
+                    + (x%cof(k)) * x%cof(k)
     end do
     if (ord > ke) then ! ord is odd
       ko= ord; k = (ko-1) / 2 ! res(k_odd)
@@ -913,6 +923,7 @@ contains
     call tmp_free(x)
   end function it_sqr
 
+  !> only for testing of it_sqr
   function it_sqr_simple(x) result(res)
     use fi_lib, only : xisqr
     type(itaylor), intent(in) :: x
@@ -926,7 +937,8 @@ contains
 
     res%cof(0) = xisqr(x%cof(0))
     do k=1, ord
-      res%cof(k) = x%cof(max(0,k-ox) : min(ox,k)) .dot. x%cof(min(ox,k) : max(0,k-ox):-1)
+      res%cof(k) = x%cof(max(0,k-ox) : min(ox,k)) .dot. &
+                   x%cof(min(ox,k)   : max(0,k-ox):-1)
     end do
 
     res%tmp = .true.
@@ -1016,6 +1028,14 @@ contains
     call tmp_free(x)
   end function it_exp
 
+  !> general algorithm for sin, cos, sinh and cosh
+  !> \param x    ... argument it
+  !> \param sig  ... has to be wether plus or minus [1] according to
+  !!                 the derivation of cfun: D(sfun) = sig*sfun
+  !> \param sin  ... result it for sin
+  !> \param cos  ... result it for cos
+  !> \param sfun ... wether sin or sinh
+  !> \param cfun ... wether cos or cosh
   subroutine it_si_co(x, sig, si, co, sfun, cfun)
     type(itaylor), intent(in)    :: x
     type(interval), intent(in)   :: sig
@@ -1037,6 +1057,8 @@ contains
     type(itaylor), intent(inout) :: si, co
     integer :: ord, ox, k, j
 
+    ! assert abs(sig) = one
+
     ox = order(x)
     ord = max_essential_order(ox) ! = max_ord if ord is bounded
 
@@ -1052,7 +1074,7 @@ contains
         si%cof(k) = si%cof(k) + ival(k-j) * co%cof(j) * x%cof(k-j)
         co%cof(k) = co%cof(k) + ival(k-j) * si%cof(j) * x%cof(k-j)
       end do
-      si%cof(k) =  si%cof(k) / ival(k)
+      si%cof(k) = si%cof(k) / ival(k)
       co%cof(k) = sig * co%cof(k) / ival(k)
     end do
     si%tmp = .false.
@@ -1283,6 +1305,10 @@ contains
     call tmp_free(x); call free(xt)
   end function it_acoth
 
+  !> generalized algorithm for the computation of the taylor components of 
+  !! several elemental functions: log, tan, cot, asin, acos, atan, acot, 
+  !! tanh, coth, asinh, acosh, atanh, acoth
+  !! it needs only the individual it of g := 1/f'(x)
   !> \param x ... expansion point
   !> \param f ... function to calculate taylor coef.
   !> \param g ... 1 / f'(x)
@@ -1353,7 +1379,7 @@ contains
   ! factorial
   function fac(n) result(res)
     integer, intent(in) :: n
-    integer             :: res, i
+    integer(i64)        :: res, i
 
     res = 1
     do i=1, n
