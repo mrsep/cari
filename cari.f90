@@ -7,26 +7,29 @@ module cari
 implicit none
 
 !> TODO
-! - output of min_denorm
-! - there are several issues with the i/o formats, esp. with gfortran
+! - output of -min_denorm, extremal normalized numbers in each format
 ! - the plan is to implement these functions also for general
-! 	numberformats R := R(b, l, emin, emax) and interface them
+! 	numberformats R := R(b, l, emin, emax) and interface them, independent of
+! 	the available formats on the machine
 !   -> fp# are element of instance of general numberformat type
 !   -> some constants should be part of numberformat type, or inq functions
 !      of them, or better safe the api and serve new module for general
 !      numberformats??
-! - pred, succ
 ! - arith expression parser???
-! - verified I/O
+! - verified I/O: 
+!   - get with control of the rounding mode --> get of interval enclosures of
+!     not representable real numbers, e.g. 0.1
 
+! everything is public, but it's better to only import stuff really needed
 public
 
-!> kind parameters
+!> real kind parameters
 integer, parameter :: sp = kind(0.0)
 integer, parameter :: dp = kind(0.0D0)
 integer, parameter :: ep = selected_real_kind(18, 1000)
 integer, parameter :: qp = kind(0.0Q0)
 
+!> integer kind parameters
 integer, parameter :: i8  = selected_int_kind(int(log10(2.0**8)))
 integer, parameter :: i16 = selected_int_kind(int(log10(2.0**16)))
 integer, parameter :: i32 = selected_int_kind(int(log10(2.0**32)))
@@ -35,7 +38,7 @@ integer, parameter :: i64 = selected_int_kind(int(log10(2.0**63)))
 !> precision names
 character(len=2), parameter, dimension(4) :: cprecs = (/ 'sp', 'dp', 'ep', 'qp' /)
 
-!> global kind parameter
+!> global standard-kind parameter
 integer, parameter :: prec = dp
 
 !> standard-kind fp constants
@@ -47,27 +50,32 @@ real(prec), parameter :: half = 0.5_prec
 !> base of floating point system
 integer, parameter :: base = radix(0.0_prec)
 
-!> needed len of a string to represent a real number with appropriate precision
-!! prec2len()
-integer, parameter :: slen = 15
-integer, parameter :: dlen = 24
-integer, parameter :: elen = 43
-integer, parameter :: qlen = 43
+! needed len of a string to represent a real number with appropriate precision
+! included sign, fractional point, exponent
+! also available via generic function prec2len(.)
+integer, parameter :: slen = 16
+integer, parameter :: dlen = 25
+integer, parameter :: elen = 30
+integer, parameter :: qlen = 45
 
-!> format strings for exact output (default)
-!! prec2fmt()
-character(*), parameter :: sfmt = '(E15.8)'  !  8 notw. Dezimalstellen
-character(*), parameter :: dfmt = '(E25.18)' ! 17 notw. Dezimalstellen
-!> \bug problems with gfortran!
-character(*), parameter :: efmt = '(E31.22)' ! 20 notw. Dezimalstellen
-character(*), parameter :: qfmt = '(E43.35)' ! 35 notw. Dezimalstellen
+! format strings for exact output (default)    s0.dd...ddEse...e
+! also available via prec2fmt(prec)
+character(*), parameter :: sfmt = '(E16.9  E2)'   !  9 essential decimal digits
+character(*), parameter :: dfmt = '(E25.17 E3)'   ! 17 essential decimal digits
+character(*), parameter :: efmt = '(E30.21 E4)'   ! 21 essential decimal digits
+character(*), parameter :: qfmt = '(E45.36 E4)'   ! 36 essential decimal digits
 
-!> format strings for exact output (scientific)
-!! prec2fmts()
-character(*), parameter :: sfmts = '(ES14.7)'  !  8 notw. Dezimalstellen
-character(*), parameter :: dfmts = '(ES23.16)' ! 17 notw. Dezimalstellen
-character(*), parameter :: efmts = '(ES26.19)' ! 20 notw. Dezimalstellen
-character(*), parameter :: qfmts = '(ES42.34)' ! 35 notw. Dezimalstellen
+! format strings for exact output (scientific) sd.dd...ddEse...e
+! also available via prec2fmts(prec)
+character(*), parameter :: sfmts = '(ES15.8  E2)' !  9 essential decimal digits
+character(*), parameter :: dfmts = '(ES24.16 E3)' ! 17 essential decimal digits
+character(*), parameter :: efmts = '(ES29.20 E4)' ! 21 essential decimal digits
+character(*), parameter :: qfmts = '(ES44.35 E4)' ! 36 essential decimal digits
+
+!> maximal length of format string for fp#
+integer, parameter ::  fmtlen = 11
+!> maximal length of format string for fp# (scientific)
+integer, parameter :: sfmtlen = 12
 
 !> count of bits for exponent in the fp format
 integer, parameter :: s_expbits = 8
@@ -85,13 +93,17 @@ type real_precision
   character(len=2)  :: name
   integer           :: prec, expprec, bias
   integer           :: strlen
-  character(len=8)  :: fmt
-  character(len=9)  :: sfmt
+  character(len=fmtlen)  :: fmt
+  character(len=sfmtlen) :: sfmt
   character(len=22) :: bin_fmt
 end type
 
+interface put
+  module procedure put_s, put_d, put_e!, put_i8, put_i16, put_i32, put_i64
+end interface put
+
 interface ulp
-  module procedure ulps, ulpd, ulpe
+  module procedure ulp_s, ulp_d, ulp_e
 end interface
 
 interface bias
@@ -100,6 +112,14 @@ end interface
 
 interface log2
   module procedure log2_s, log2_d, log2_e
+end interface
+
+interface pred
+  module procedure pred_s, pred_d, pred_e
+end interface
+
+interface succ
+  module procedure succ_s, succ_d, succ_e
 end interface
 
 interface expbits
@@ -116,7 +136,7 @@ end interface
 
 contains 
 
-  !> returns human readable form of the floating point number type
+  !> returns human readable form of the floating point precision type
   elemental function prec2char(prec) result(res)
     integer, intent(in) :: prec
     character(len=2)    :: res
@@ -130,16 +150,18 @@ contains
     else if (prec == ep) then
       res = cprecs(3)
     else
-      res = '??'
+      res = '?p'
     end if
   end function prec2char
  
   !> returns the appropriate format string for the given floating-point
-  !  precision
+  !! precision
+  !! if complete is not given, then a partial format is returned (for using as
+  !! part in format string)
   elemental function prec2fmt(prec, complete) result(res)
     integer, intent(in)           :: prec
     logical, intent(in), optional :: complete
-    character(len=8)              :: res
+    character(len=fmtlen)         :: res
 
     if (present(complete) .and. complete) then
       if (prec == sp) then
@@ -173,7 +195,7 @@ contains
   elemental function prec2fmts(prec, complete) result(res)
     integer, intent(in)           :: prec
     logical, intent(in), optional :: complete
-    character(len=9)              :: res
+    character(len=sfmtlen)        :: res
 
     if (present(complete) .and. complete) then
       if (prec == sp) then
@@ -202,7 +224,7 @@ contains
     end if
   end function prec2fmts
 
-  !> returns the len of the string needed for representing one fp-number in
+  !> returns the len of the string needed for representing one fp#s in
   !! the given precision
   elemental function prec2len(prec) result(res)
     integer, intent(in) :: prec
@@ -221,7 +243,40 @@ contains
     end if
   end function prec2len
  
-  !> converts an sp-fp to string
+  !> outputs fp# with pre & post text in normal or scientific form
+  subroutine put_s(x, pre, post, scientific)
+    real(sp), intent(in)                   :: x
+    character(len=*), intent(in), optional :: pre, post
+    logical, intent(in), optional          :: scientific
+
+    if (present(pre)) write(*,fmt='(A)', advance='no') pre
+    write(*,*) real2str_s(x, scientific)
+    if (present(post)) write(*,fmt='(A)', advance='yes') post 
+  end subroutine put_s
+
+  !> outputs fp# with pre & post text in normal or scientific form
+  subroutine put_d(x, pre, post, scientific)
+    real(dp), intent(in)                   :: x
+    character(len=*), intent(in), optional :: pre, post
+    logical, intent(in), optional          :: scientific
+
+    if (present(pre)) write(*,fmt='(A)', advance='no') pre
+    write(*,*) real2str_d(x, scientific)
+    if (present(post)) write(*,fmt='(A)', advance='yes') post 
+  end subroutine put_d
+   
+  !> outputs fp# with pre & post text in normal or scientific form
+  subroutine put_e(x, pre, post, scientific)
+    real(ep), intent(in)                   :: x
+    character(len=*), intent(in), optional :: pre, post
+    logical, intent(in), optional          :: scientific
+
+    if (present(pre)) write(*,fmt='(A)', advance='no') pre
+    write(*,*) real2str_e(x, scientific)
+    if (present(post)) write(*,fmt='(A)', advance='yes') post 
+  end subroutine put_e
+  
+  !> converts an sp-fp# to string
   elemental function real2str_s(x, scientific) result(res)
     real(sp), intent(in)           :: x
     logical, optional, intent(in)  :: scientific
@@ -234,7 +289,7 @@ contains
     end if
   end function real2str_s
   
-  !> converts an dp-fp to string
+  !> converts an dp-fp# to string
   elemental function real2str_d(x, scientific) result(res)
     real(dp), intent(in)           :: x
     logical, optional, intent(in)  :: scientific
@@ -247,13 +302,11 @@ contains
     end if
   end function real2str_d
   
-  ! TODO, gfortran
-  !> converts an ep/qp-fp to string
+  !> converts an ep/qp-fp# to string
   function real2str_e(x, scientific) result(res)
     real(ep), intent(in)           :: x
     logical, optional, intent(in)  :: scientific
     character(len=prec2len(ep))    :: res
-    ! write(*,*) prec2len(ep), prec2fmt(ep, .true.)
 
     if (present(scientific) .and. scientific) then
       write(res, fmt=prec2fmts(ep, .true.)) x
@@ -262,29 +315,77 @@ contains
     end if
   end function real2str_e
 
+  !> calculates the predecessor fp# of x
+  elemental function pred_s(x) result(res)
+    real(sp), intent(in) :: x
+    real(sp)             :: res
+
+    res = nearest(x, -1.0_sp)
+  end function pred_s
+
+  !> calculates the predecessor fp# of x
+  elemental function pred_d(x) result(res)
+    real(dp), intent(in) :: x
+    real(dp)             :: res
+
+    res = nearest(x, -1.0_dp)
+  end function pred_d
+  
+  !> calculates the predecessor fp# of x
+  elemental function pred_e(x) result(res)
+    real(ep), intent(in) :: x
+    real(ep)             :: res
+
+    res = nearest(x, -1.0_ep)
+  end function pred_e
+  
+  !> calculates the successor fp# of x
+  elemental function succ_s(x) result(res)
+    real(sp), intent(in) :: x
+    real(sp)             :: res
+
+    res = nearest(x, +1.0_sp)
+  end function succ_s
+
+  !> calculates the successor fp# of x
+  elemental function succ_d(x) result(res)
+    real(dp), intent(in) :: x
+    real(dp)             :: res
+
+    res = nearest(x, +1.0_dp)
+  end function succ_d
+  
+  !> calculates the successor fp# of x
+  elemental function succ_e(x) result(res)
+    real(ep), intent(in) :: x
+    real(ep)             :: res
+
+    res = nearest(x, +1.0_ep)
+  end function succ_e
+
   !> calculates the unit in the last place of a sp fp#
-  elemental function ulps(x) result(res)
+  elemental function ulp_s(x) result(res)
     real(sp), intent(in) :: x
     real(sp)             :: res
 
     res = real(base, kind(x))**(exponent(x) - digits(x))  
-  end function ulps
+  end function ulp_s
 
   !> calculates the unit in the last place of a dp fp#
-  elemental function ulpd(x) result(res)
+  elemental function ulp_d(x) result(res)
     real(dp), intent(in) :: x
     real(dp)             :: res
 
     res = real(base, kind(x))**(exponent(x) - digits(x))  
-  end function ulpd
+  end function ulp_d
 
   !> calculates the unit in the last place of a ep or qp fp#
-  elemental function ulpe(x) result(res)
+  elemental function ulp_e(x) result(res)
     real(ep), intent(in) :: x
     real(ep)             :: res
 
     res = real(base, kind(x))**(exponent(x) - digits(x))  
-  end function ulpe
+  end function ulp_e
 
 !! there is no compiler supporting all formats in {s, d, e, q}
 !! => one procedures argument kind is down/upgraded

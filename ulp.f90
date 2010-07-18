@@ -13,25 +13,34 @@ do while (q /= 42.0)
 
   write(*,*)
   write(*,*) ' === Analyse mit Single Precision ==='
-  write(*,*) 'Value:   ', s
-  write(*,*) 'Mantisse: ', fraction(s)
+  call put( s,           ' Value:    ')
+  call put( fraction(s), ' Mantisse: ')
   write(*,*) 'Exponent: ', exponent(s)
-  write(*,*) 'ulp(x):   ', ulp(s)
-  
+  call put( ulp(s),      ' ulp(x):   ')
+  call put( pred(s),     ' pred(x):  ')
+  call put( succ(s),     ' succ(x):  ')
+ 
   write(*,*)
   write(*,*) ' === Analyse mit Double Precision ==='
-  write(*,*) 'Value:   ', d
-  write(*,*) 'Mantisse: ', fraction(d)
+  call put( d,           ' Value:    ')
+  call put( fraction(d), ' Mantisse: ')
   write(*,*) 'Exponent: ', exponent(d)
-  write(*,*) 'ulp(x):   ', ulp(d)
+  call put( ulp(d),      ' ulp(x):   ')
+  call put( pred(d),     ' pred(x):  ')
+  call put( succ(d),     ' succ(x):  ')
+!  call put( d*(one+ulp(one)), ' x*(1+e):  ')
+!  call put( d+ulp(d),         ' x+ulp(x): ')
+!  call put( d*(one-ulp(one)), ' x*(1-e):  ')
+!  call put( d-ulp(d),         ' x-ulp(x): ')
 
   write(*,*)
   write(*,*) ' === Analyse mit Quadruple Precision ==='
-  write(*,*) 'Value:   ', q
-  write(*,*) 'Mantisse: ', fraction(q)
+  call put( q,           ' Value:    ')
+  call put( fraction(q), ' Mantisse: ')
   write(*,*) 'Exponent: ', exponent(q)
-  write(*,*) 'ulp(x):   ', ulp(q)
-  write(*,*)
+  call put( ulp(q),      ' ulp(x):   ')
+  call put( pred(q),     ' pred(x):  ')
+  call put( succ(q),     ' succ(x):  ')
 end do
 end program ulp_prog
 
