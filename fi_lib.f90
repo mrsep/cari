@@ -45,12 +45,14 @@
 !> \date 09.10.1998
 
 !> modified by Hans Peschke in May 2010
+!! - this file has its origins in the old fi_lib distributiom in fxsc adjusted
+!!   by Dr. R. Lohner (more details in fi_lib documentation)
 !! - updated to fi_lib version 1.2
 !! - use original file- and function names and use fi_lib.h and macros for renaming
 !! - remove the pointer-stuff
 !! - use F2003 ISO-C-Bindings
 module fi_lib
-use cari, only : prec, one, zero
+use cari, only : dp, prec, one, zero
 use ivalarith
 implicit none
 
@@ -499,6 +501,38 @@ private ::  xipatan2
     end function xiacoth
   end interface
 
+  interface erf
+    function xrerf(p0) result(res) bind(C)
+      use cari, only : prec
+      implicit none
+      real(prec)                    :: res
+      real(prec), value, intent(in) :: p0
+    end function xrerf
+    
+    function xierf(p0) result(res) bind(C)
+      use ivalarith, only : interval
+      implicit none
+      type(interval)                    :: res
+      type(interval), value, intent(in) :: p0
+    end function xierf
+  end interface
+
+  interface erfc
+    function xrerfc(p0) result(res) bind(C)
+      use cari, only : prec
+      implicit none
+      real(prec)                    :: res
+      real(prec), value, intent(in) :: p0
+    end function xrerfc
+    
+    function xierfc(p0) result(res) bind(C)
+      use ivalarith, only : interval
+      implicit none
+      type(interval)                    :: res
+      type(interval), value, intent(in) :: p0
+    end function xierfc
+  end interface
+
  !
  ! interface blocks and fortran 90 implementation for standard functions
  ! with two arguments.
@@ -508,11 +542,6 @@ private ::  xipatan2
  !   for real(prec) and integer arguments this reduces to the standard f90
  !   ** - operator. in order to get an interval result for these operations
  !   one *must* use the pow-function instead of the operator ** !
- !
- ! atan2(y,x) = arctan(y/x)  ( real(fpkind) and type(interval) )
- !   for real(prec) arguments this reduces to the standard f90 atan2 - function
- !   in order to get an interval result for this function one *must* convert
- !   both arguments to type interval !
  !
 
   interface pow
@@ -529,110 +558,139 @@ private ::  xipatan2
 
 contains
 
+  !> implementation of the power function x^y for
+  !! real base and real exponent fp numbers
+  !! wrapps the op**
+  !> \param x ... base
+  !> \param y ... exponent
+  !> \return x to the power of y as a real fp number
   function xrpowr(x, y) result(res)
     real(prec)             :: res
     real(prec), intent(in) :: x, y
 
     res = x ** y
-
-    return
   end function xrpowr
 
+  !> implementation of the power function x^y for
+  !! interval base and interval exponent
+  !! uses exp(y*log(x)) if y is no point interval
+  !> \param x ... base
+  !> \param y ... exponent
+  !> \return x to the power of y as a interval
   function xipowi(x, y) result(res)
     type(interval)             :: res
     type(interval), intent(in) :: x, y
 
-    if ( diam(y) == 0.0_prec ) then
+    if ( diam(y) == zero ) then
       res = xipowr(x, inf(y))
     else
       res = exp(y*log(x))
     end if
-
-    return
   end function xipowi
 
+  !> implementation of the power function x^y for
+  !! integer base and integer exponent by
+  !! successive squaring and multiplying of x
+  !! ( multiply x or 1/x according to sign(y) )
+  !> \param x ... base
+  !> \param y ... exponent
+  !> \return x to the power of y as a integer
   function xrpowg(x, y) result(res)
     type(interval)           :: res
     real(prec), intent(in)   :: x
     integer, intent(in)      :: y
-
     type(interval)           :: r,s
     integer                  :: j
 
-    ! compute power by successive squaring and multiplying of x
-    ! ( multiply x or 1/x according to sign(y) )
-
     if ( y == 0 ) then
-      if ( x == 0.0_prec ) then
+      if ( x == zero ) then
         res = ival( x ** y )  ! force runtime error: 0 ** 0
       else
-        res = ival( 1.0_prec )
+        res = ival( one )
       end if
     else
       j = abs(y)
-      r = ival( 1.0_prec )
+      r = ival( one )
       if ( y > 0 ) then
         s = ival( x )
       else
-        s = 1.0_prec .idiv. x
+        s = one .idiv. x
       end if
       do
         if ( mod(j,2) == 1 ) r = r*s
         j = j / 2
         if ( j > 0 ) then
-          s = sqr(s)
+          s = sqr(s) ! allways rounds one ulp out: [1.0]^2 /= [1]
         else
           exit
         end if
       end do
       res = r
     end if
-
-    return
   end function xrpowg
 
+  !> implementation of the power function x^y for
+  !! interval base and integer exponent
+  !> \param x ... base
+  !> \param y ... exponent
+  !> \return x to the power of y as interval 
   function xipowg(x, y) result(res)
     type(interval)             :: res
     type(interval), intent(in) :: x
     integer, intent(in)        :: y
 
-    if ( (y <= 0) .and. (0.0_prec .in. x) ) then
+    if ( (y <= 0) .and. (zero .in. x) ) then
       ! illegal operands
       res = ival( real(0 ** y, prec) )   !  force runtime error:  0 ** y with y < 0
-    else if ( ( mod(y,2) == 1 ) .or. .not. ( 0.0_prec .in. x) ) then
+    else if ( ( mod(y,2) == 1 ) .or. .not. ( zero .in. x) ) then
       ! function is monotone on x
       res = xrpowg(inf(x),y) .ihull. xrpowg(sup(x),y)
     else if ( -inf(x) > sup(x) ) then
+      ! [mod(y,2) == 0 .and. zero .in. x]
       ! function not monotone: zero is minimum, inf(x) ** y is maximum
-      res = 0.0_prec .ihull. xrpowg(inf(x),y)
+      res = zero .ihull. xrpowg(inf(x),y)
     else
+      ! [mod(y,2) == 0 .and. zero .in. x]
       ! function not monotone: zero is minimum, sup(x) ** y is maximum
-      res = 0.0_prec .ihull. xrpowg(sup(x),y)
+      res = zero .ihull. xrpowg(sup(x),y)
     end if
-
-    return
   end function xipowg
 
+  !> implementation of the power function x^y for
+  !! interval base and real fp number as exponent
+  !> \param x ... base
+  !> \param y ... exponent
+  !> \return x to the power of y as interval 
   function xipowr(x, y) result(res)
     type(interval)             :: res
     type(interval), intent(in) :: x
     real(prec), intent(in)     :: y
 
     ! TODO: this is arbitrary (magic number), change it
+    ! 1.0224285306099223617656252229944^32000 = Infinity
+    ! the base results from huge(real(dp))^(1/32000)
+    ! but:
+    ! exp . log get far more better enclosures for arguments near 1.0
+    ! -> xipowg -> xrpowg!!!
+    ! but with exp,log, the infinity is also coming
     real(prec),parameter     :: max_integer_exponent = 32000.0_prec
 
     ! compute powers x ** y using interval power integer in the case the real
     ! exponent y contains a precise integer value below max_integer_exponent
 
     if ( ( abs(y) <= max_integer_exponent ) .and. ( y == int(y) ) ) then
-      res = xipowg( x, int(y) )
+      res = xipowg( x, int(y) ) ! square and multiply
     else
       res = exp( y * log(x) )
     end if
-
-    return
   end function xipowr
 
+  !> TODO
+  !> Helper function for xiatan2
+  !> \param y  ... numerator of the argument to arctan
+  !> \param x  ... denominator of the argument to arctan
+  !> \param pi ... pi itself
+  !> \result TODO
   function xipatan2(y, x, pi) result(res)
     type(interval)             :: res
     real(prec), intent(in)     :: x,y
@@ -645,10 +703,16 @@ contains
     else
       res = atan( y .idiv. x ) - pi
     end if
-
-    return
   end function xipatan2
 
+  !> TODO
+  !> atan2(y,x) = arctan(y/x)  ( real(fpkind) and type(interval) )
+  !> for real(prec) arguments this reduces to the standard f90 atan2 - function
+  !> in order to get an interval result for this function one *must* convert
+  !> both arguments to type interval
+  !> \param y  ... numerator of the argument to arctan
+  !> \param x  ... denominator of the argument to arctan
+  !> \result arctan(y,x)
   function xiatan2(y, x) result(res)
     type(interval)             :: res
     type(interval), intent(in) :: x,y
@@ -835,7 +899,5 @@ contains
 
     ! compute final result :
     res = ival( inf(lo), sup(up) )
-
-    return
   end function xiatan2
 end module fi_lib

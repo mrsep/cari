@@ -1,1 +1,38 @@
 doxygen docu
+
+fi_lib-1.2 && F2003 ISO-C-Bindings
+- reasoning the changes according to the Fortran Standard
+- doxygen documentation (atan2)
+- clear approach
+- test with all compilers
+- Copyright => Licence for cari package
+
+Reasoning: Section 15 of F2003 Standard
+- call by value or call by reference?
+  - it seems that: (tested with example programs and $ time)
+    the pointer version is faster than the value version!
+    NO! this is random and depends on optimization-level, flags and several other things
+  - but the value version does not need to change the fi_lib-1.2 code, 
+    just add the VALUE attribute to the argument-definition in the 
+    Fortran interface-specification
+- where to define that reals have the kind c_double?
+
+- assert that prec == C_DOUBLE
+  thus qp are not allowed, because the fi_lib only supports dp
+  maybe on other architectures, C demands us through C_DOUBLE the kind
+  of fp# (more specific the memory used for one number)
+
+Further Open Questions
+- how to integrate an interval-library for quads?
+  -> interval-type has to be parameterized by its component-kinds
+  -> use C_DOUBLE or dp for fi_lib interfaces?
+
+Does fi_lib depends on the rounding-mode?
+  - if we trust the documentation, no it does not depend on the rounding mode, thus everything should be fine :)
+  - test unveiled, that the result of an symmetric interval is not symmetric any more, e.g. sin(-1,1)
+
+interval arithmetic:
+ - midpoint-radius version according to "Rump - Fast and parallel interval arithmetic" and INTLAB
+ - Kahan arithmetic
+ - Containment Set arithmetic
+ - complex intervals, complex interval standard functions

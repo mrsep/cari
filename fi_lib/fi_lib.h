@@ -51,17 +51,11 @@
 /*                     end of configuring section                    */
 /*********************************************************************/
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*********************************************************************/
 /* Interval data type                                                */
 /*********************************************************************/
 
-#ifndef CXSC_INCLUDE
 typedef struct interval { double INF, SUP;} interval ;
-#endif
 
 /*********************************************************************/
 /* PROTOTYPE manages the difficulties in prototyping of K & R        */
@@ -113,23 +107,23 @@ typedef struct interval { double INF, SUP;} interval ;
 /*********************************************************************/
 
 typedef union 
-	{
-		double f;
-		struct 
-		{
+ {
+  double f;
+  struct 
+  {
 #if INTEL
-			unsigned int mant1 :32;
-			unsigned int mant0 :20;
-			unsigned int expo  :11;
-			unsigned int sign  : 1;
+   unsigned int mant1 :32;
+   unsigned int mant0 :20;
+   unsigned int expo  :11;
+   unsigned int sign  : 1;
 #else
-			unsigned int sign  : 1;
-			unsigned int expo  :11;
-			unsigned int mant0 :20;
-			unsigned int mant1 :32;
+   unsigned int sign  : 1;
+   unsigned int expo  :11;
+   unsigned int mant0 :20;
+   unsigned int mant1 :32;
 #endif
-		} ieee;
-	} a_diee;
+  } ieee;
+ } a_diee;
 
 /*********************************************************************/
 /* NAN (not a number) test                                           */
@@ -295,59 +289,63 @@ extern double q_erft[7];
 /*   use original fi_lib-1.2 file- and function names, but be        */
 /*   compatible with fxsc-names                                      */
 /*********************************************************************/
-#define q_sqr	  xrsqr
-#define q_sqrt	xrsqrt
-#define q_exp	  xrexp
-#define q_expm	xrexpm1
-#define q_sinh	xrsinh
-#define q_cosh	xrcosh
-#define q_coth	xrcoth
-#define q_tanh	xrtanh
-#define q_log	  xrlog
-#define q_lg1p	xrlog1p
-#define q_asnh	xrasinh
-#define q_acsh	xracosh
-#define q_acth	xracoth
-#define q_atnh	xratanh
-#define q_asin	xrasin
-#define q_acos	xracos
-#define q_acot	xracot
-#define q_atan	xratan
-#define q_sin	  xrsin
-#define q_cos	  xrcos
-#define q_cot	  xrcot
-#define q_tan	  xrtan
-#define q_exp2	xrexp2
-#define q_ex10	xrexp10
-#define q_log2	xrlog2
-#define q_lg10	xrlog10
+#define q_sqr   xrsqr
+#define q_sqrt  xrsqrt
+#define q_exp   xrexp
+#define q_expm  xrexpm1
+#define q_sinh  xrsinh
+#define q_cosh  xrcosh
+#define q_coth  xrcoth
+#define q_tanh  xrtanh
+#define q_log   xrlog
+#define q_lg1p  xrlog1p
+#define q_asnh  xrasinh
+#define q_acsh  xracosh
+#define q_acth  xracoth
+#define q_atnh  xratanh
+#define q_asin  xrasin
+#define q_acos  xracos
+#define q_acot  xracot
+#define q_atan  xratan
+#define q_sin   xrsin
+#define q_cos   xrcos
+#define q_cot   xrcot
+#define q_tan   xrtan
+#define q_exp2  xrexp2
+#define q_ex10  xrexp10
+#define q_log2  xrlog2
+#define q_lg10  xrlog10
+#define q_erf   xrerf
+#define q_erfc  xrerfc
 
-#define j_exp	  xiexpo
-#define j_expm	xiexpm1
-#define j_sinh	xisinh
-#define j_cosh	xicosh
-#define j_coth	xicoth
-#define j_tanh	xitanh
-#define j_log	  xilog
-#define j_lg1p	xilog1p
-#define j_sqrt	xisqrt
-#define j_sqr	  xisqr
-#define j_asnh	xiasinh
-#define j_acsh	xiacosh
-#define j_acth	xiacoth
-#define j_atnh	xiatanh
-#define j_asin	xiasin
-#define j_acos	xiacos
-#define j_acot	xiacot
-#define j_atan	xiatan
-#define j_sin	  xisin
-#define j_cos	  xicos
-#define j_cot	  xicot
-#define j_tan	  xitan
-#define j_exp2	xiexp2
-#define j_ex10	xiexp10
-#define j_log2	xilog2
-#define j_lg10	xilog10
+#define j_exp   xiexpo
+#define j_expm  xiexpm1
+#define j_sinh  xisinh
+#define j_cosh  xicosh
+#define j_coth  xicoth
+#define j_tanh  xitanh
+#define j_log   xilog
+#define j_lg1p  xilog1p
+#define j_sqrt  xisqrt
+#define j_sqr   xisqr
+#define j_asnh  xiasinh
+#define j_acsh  xiacosh
+#define j_acth  xiacoth
+#define j_atnh  xiatanh
+#define j_asin  xiasin
+#define j_acos  xiacos
+#define j_acot  xiacot
+#define j_atan  xiatan
+#define j_sin   xisin
+#define j_cos   xicos
+#define j_cot   xicot
+#define j_tan   xitan
+#define j_exp2  xiexp2
+#define j_ex10  xiexp10
+#define j_log2  xilog2
+#define j_lg10  xilog10
+#define j_erf   xierf
+#define j_erfc  xierfc
 
 /*********************************************************************/
 /* functions for internal use only                                   */
@@ -370,12 +368,6 @@ _PROTOTYPE(double q_rtrg,(double x, long int k));
 _PROTOTYPE(double q_r2tr,(double r, long int k));
 _PROTOTYPE(double q_pred,(double x));
 _PROTOTYPE(double q_succ,(double x));
-_PROTOTYPE(double q_comp,(int s, double m, int e));
-_PROTOTYPE(double q_cmps,(double m, int e));
-_PROTOTYPE(int q_sign,(double x));
-_PROTOTYPE(double q_mant,(double x));
-_PROTOTYPE(double q_mnts,(double x));
-_PROTOTYPE(int q_expo,(double x));
 
 /*********************************************************************/
 /*               prototypes for library functions                    */
@@ -439,6 +431,3 @@ _PROTOTYPE(interval j_lg10,(interval x));
 _PROTOTYPE(interval j_erf,(interval x));
 _PROTOTYPE(interval j_erfc,(interval x));
 
-#ifdef __cplusplus
-}
-#endif
