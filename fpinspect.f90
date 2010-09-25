@@ -3,9 +3,9 @@ use cari
 use viscari
 implicit none
 
-real(kind=sp) :: s
-real(kind=dp) :: d
-real(kind=qp) :: q
+real(sp) :: s
+real(dp) :: d
+real(qp) :: q
 
 do while (q /= 42.0)
   write(*,*) 'Bitte geben Sie die zu analysierende Gleitkommazahl ein.'

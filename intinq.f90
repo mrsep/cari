@@ -1,47 +1,40 @@
-! Numerical inquiry functions for intrinsic INTEGER types: 
-!
-    PROGRAM intgrinq
+!> Numerical inquiry functions for intrinsic INTEGER types: 
+program intgrinq
+use cari
+implicit none
 
-      IMPLICIT NONE
+integer(i8)  :: b     ! 1-byte integer
+integer(i16) :: h     ! 2-byte integer
+integer(i32) :: f     ! 4-byte integer
+integer(i64) :: d     ! 8-byte integer
 
-      INTEGER, PARAMETER :: byte = SELECTED_INT_KIND(2)
-      INTEGER, PARAMETER :: half = SELECTED_INT_KIND(4)
-      INTEGER, PARAMETER :: full = SELECTED_INT_KIND(9)
-      INTEGER, PARAMETER :: dble = SELECTED_INT_KIND(18)
-
-      INTEGER (KIND=byte) :: b     ! 1-byte integer
-      INTEGER (KIND=half) :: h     ! 2-byte integer
-      INTEGER (KIND=full) :: f     ! 4-byte integer
-      INTEGER (KIND=dble) :: d     ! 8-byte integer
-
-      WRITE(*,*)
-      WRITE(*,*) ' ===== 1-Byte INTEGER Type ==== '
-      WRITE(*,*) 'KIND(b) : ', kind(b)
-      WRITE(*,*) 'RADIX(b) : ', radix(b)
-      WRITE(*,*) 'DIGITS(b) : ', digits(b)
-      WRITE(*,*) 'HUGE(b) : ', huge(b)
-      WRITE(*,*) 'RANGE(b) : ', range(b)
-      WRITE(*,*)
-      WRITE(*,*) ' ===== 2-Byte INTEGER Type ==== '
-      WRITE(*,*) 'KIND(h) : ', kind(h)
-      WRITE(*,*) 'RADIX(h) : ', radix(h)
-      WRITE(*,*) 'DIGITS(h) : ', digits(h)
-      WRITE(*,*) 'HUGE(h) : ', huge(h)
-      WRITE(*,*) 'RANGE(h) : ', range(h)
-      WRITE(*,*)
-      WRITE(*,*) ' ===== 4-Byte INTEGER Type (Default) ==== '
-      WRITE(*,*) 'KIND(f) : ', kind(f)
-      WRITE(*,*) 'RADIX(f) : ', radix(f)
-      WRITE(*,*) 'DIGITS(f) : ', digits(f)
-      WRITE(*,*) 'HUGE(f) : ', huge(f)
-      WRITE(*,*) 'RANGE(f) : ', range(f)
-      WRITE(*,*)
-      WRITE(*,*) ' ===== 8-Byte INTEGER Type ==== '
-      WRITE(*,*) 'KIND(d) : ', kind(d)
-      WRITE(*,*) 'RADIX(d) : ', radix(d)
-      WRITE(*,*) 'DIGITS(d) : ', digits(d)
-      WRITE(*,*) 'HUGE(d) : ', huge(d)
-      WRITE(*,*) 'RANGE(d) : ', range(d)
-      WRITE(*,*)
-    END PROGRAM intgrinq
-
+write(*,*)
+write(*,*) ' ===== 1-Byte INTEGER Type ==== '
+write(*,*) 'KIND(b):   ', kind(b)
+write(*,*) 'RADIX(b):  ', radix(b)
+write(*,*) 'DIGITS(b): ', digits(b)
+write(*,*) 'HUGE(b):   ', huge(b)
+write(*,*) 'RANGE(b):  ', range(b)
+write(*,*)
+write(*,*) ' ===== 2-Byte INTEGER Type ==== '
+write(*,*) 'KIND(h):   ', kind(h)
+write(*,*) 'RADIX(h):  ', radix(h)
+write(*,*) 'DIGITS(h): ', digits(h)
+write(*,*) 'HUGE(h):   ', huge(h)
+write(*,*) 'RANGE(h):  ', range(h)
+write(*,*)
+write(*,*) ' ===== 4-Byte INTEGER Type (Default) ==== '
+write(*,*) 'KIND(f):   ', kind(f)
+write(*,*) 'RADIX(f):  ', radix(f)
+write(*,*) 'DIGITS(f): ', digits(f)
+write(*,*) 'HUGE(f):   ', huge(f)
+write(*,*) 'RANGE(f):  ', range(f)
+write(*,*)
+write(*,*) ' ===== 8-Byte INTEGER Type ==== '
+write(*,*) 'KIND(d):   ', kind(d)
+write(*,*) 'RADIX(d):  ', radix(d)
+write(*,*) 'DIGITS(d): ', digits(d)
+write(*,*) 'HUGE(d):   ', huge(d)
+write(*,*) 'RANGE(d):  ', range(d)
+write(*,*)
+end program intgrinq

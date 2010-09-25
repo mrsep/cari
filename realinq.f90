@@ -1,67 +1,47 @@
-! Numerical inquiry functions for intrinsic REAL types: 
-!
-    PROGRAM realinq
+!> Numerical inquiry functions for intrinsic REAL types: 
+program realinq
+use cari
+implicit none
 
-      IMPLICIT NONE
+real(sp) :: s
+real(dp) :: d
+real(qp) :: q
 
-      INTEGER, PARAMETER :: sp = kind(1.0)
-      INTEGER, PARAMETER :: dp = kind(1.0D0)
-      INTEGER, PARAMETER :: xp = SELECTED_REAL_KIND(18,1000)
-      INTEGER, PARAMETER :: qp = SELECTED_REAL_KIND(33,1000)
-
-      REAL (KIND=sp) :: s     ! single precision
-      REAL (KIND=dp) :: d     ! double precision
-      REAL (KIND=xp) :: x     ! double extended or quadruple precision
-      REAL (KIND=qp) :: q     ! double extended or quadruple precision
-
-      WRITE(*,*)
-      WRITE(*,*) ' ===== Single Precision REAL Type (Default) ==== '
-      WRITE(*,*) 'KIND(s) : ', kind(s)
-      WRITE(*,*) 'RADIX(s) : ', radix(s)
-      WRITE(*,*) 'DIGITS(s) : ', digits(s)
-      WRITE(*,*) 'MINEXPONENT(s) : ', minexponent(s)
-      WRITE(*,*) 'MAXEXPONENT(s) : ', maxexponent(s)
-      WRITE(*,*) 'HUGE(s) : ', huge(s)
-      WRITE(*,*) 'TINY(s) : ', tiny(s)
-      WRITE(*,*) 'EPSILON(s) : ', epsilon(s)
-      WRITE(*,*) 'PRECISION(s) : ', precision(s)
-      WRITE(*,*) 'RANGE(s) : ', range(s)
-      WRITE(*,*)
-      WRITE(*,*) ' ===== Double Precision REAL Type ===== '
-      WRITE(*,*) 'KIND(d) : ', kind(d)
-      WRITE(*,*) 'RADIX(d) : ', radix(d)
-      WRITE(*,*) 'DIGITS(d) : ', digits(d)
-      WRITE(*,*) 'MINEXPONENT(d) : ', minexponent(d)
-      WRITE(*,*) 'MAXEXPONENT(d) : ', maxexponent(d)
-      WRITE(*,*) 'HUGE(d) : ', huge(d)
-      WRITE(*,*) 'TINY(d) : ', tiny(d)
-      WRITE(*,*) 'EPSILON(d) : ', epsilon(d)
-      WRITE(*,*) 'PRECISION(d) : ', precision(d)
-      WRITE(*,*) 'RANGE(d) : ', range(d)
-      WRITE(*,*)
-      WRITE(*,*) ' ===== Extended or Quadruple Precision REAL Type ===== '
-      WRITE(*,*) 'KIND(x) : ', kind(x)
-      WRITE(*,*) 'RADIX(x) : ', radix(x)
-      WRITE(*,*) 'DIGITS(x) : ', digits(x)
-      WRITE(*,*) 'MINEXPONENT(x) : ', minexponent(x)
-      WRITE(*,*) 'MAXEXPONENT(x) : ', maxexponent(x)
-      WRITE(*,*) 'HUGE(x) : ', huge(x)
-      WRITE(*,*) 'TINY(x) : ', tiny(x)
-      WRITE(*,*) 'EPSILON(x) : ', epsilon(x)
-      WRITE(*,*) 'PRECISION(x) : ', precision(x)
-      WRITE(*,*) 'RANGE(x) : ', range(x)
-      WRITE(*,*)
-      WRITE(*,*) ' ===== Extended or Quadruple Precision REAL Type ===== '
-      WRITE(*,*) 'KIND(x) : ', kind(q)
-      WRITE(*,*) 'RADIX(x) : ', radix(q)
-      WRITE(*,*) 'DIGITS(x) : ', digits(q)
-      WRITE(*,*) 'MINEXPONENT(x) : ', minexponent(q)
-      WRITE(*,*) 'MAXEXPONENT(x) : ', maxexponent(q)
-      WRITE(*,*) 'HUGE(x) : ', huge(q)
-      WRITE(*,*) 'TINY(x) : ', tiny(q)
-      WRITE(*,*) 'EPSILON(x) : ', epsilon(q)
-      WRITE(*,*) 'PRECISION(x) : ', precision(q)
-      WRITE(*,*) 'RANGE(x) : ', range(q)
-      WRITE(*,*)
-    END PROGRAM realinq
-
+  write(*,*)
+  write(*,*) ' ===== Single Precision REAL Type (Default) ==== '
+  write(*,*) 'KIND(s):   ', kind(s)
+  write(*,*) 'RADIX(s):  ', radix(s)
+  write(*,*) 'DIGITS(s): ', digits(s)
+  write(*,*) 'MINEXPONENT(s): ', minexponent(s)
+  write(*,*) 'MAXEXPONENT(s): ', maxexponent(s)
+  write(*,*) 'HUGE(s):      ', huge(s)
+  write(*,*) 'TINY(s):      ', tiny(s)
+  write(*,*) 'EPSILON(s):   ', epsilon(s)
+  write(*,*) 'PRECISION(s): ', precision(s)
+  write(*,*) 'RANGE(s):     ', range(s)
+  write(*,*)
+  write(*,*) ' ===== Double Precision REAL Type ===== '
+  write(*,*) 'KIND(d):   ', kind(d)
+  write(*,*) 'RADIX(d):  ', radix(d)
+  write(*,*) 'DIGITS(d): ', digits(d)
+  write(*,*) 'MINEXPONENT(d): ', minexponent(d)
+  write(*,*) 'MAXEXPONENT(d): ', maxexponent(d)
+  write(*,*) 'HUGE(d):      ', huge(d)
+  write(*,*) 'TINY(d):      ', tiny(d)
+  write(*,*) 'EPSILON(d):   ', epsilon(d)
+  write(*,*) 'PRECISION(d): ', precision(d)
+  write(*,*) 'RANGE(d):     ', range(d)
+  write(*,*)
+  write(*,*) ' ===== Extended or Quadruple Precision REAL Type ===== '
+  write(*,*) 'KIND(x):   ', kind(q)
+  write(*,*) 'RADIX(x):  ', radix(q)
+  write(*,*) 'DIGITS(x): ', digits(q)
+  write(*,*) 'MINEXPONENT(x): ', minexponent(q)
+  write(*,*) 'MAXEXPONENT(x): ', maxexponent(q)
+  write(*,*) 'HUGE(x):      ', huge(q)
+  write(*,*) 'TINY(x):      ', tiny(q)
+  write(*,*) 'EPSILON(x):   ', epsilon(q)
+  write(*,*) 'PRECISION(x): ', precision(q)
+  write(*,*) 'RANGE(x):     ', range(q)
+  write(*,*)
+end program realinq

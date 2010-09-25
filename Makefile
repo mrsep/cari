@@ -4,10 +4,11 @@ FC      = ifort
 FCFLAGS = $(FLAGS)
 CC		  = gcc
 CCFLAGS = $(FLAGS)
+LIB     = fi_lib.a
 
 all: modules programs doc
 
-programs: ulp ulp_gf inspect intinq realinq
+programs: ulp ulp_gf fpinspect intinq realinq
 
 modules: cari.o viscari.o ieeearith.o ivalarith.o fi_lib.o ivaltaylor.o
 
@@ -20,7 +21,7 @@ bin:
 	mkdir bin
 
 ivalarith.o: cari.o ieeearith.o
-ivaltaylor.o: fi_lib.o
+ivaltaylor.o: ivalarith.o fi_lib.a
 
 fi_lib.a: fi_lib.o
 	cp fi_lib/fi_lib.a fi_lib.a
@@ -38,24 +39,14 @@ ulp: bin cari.o
 ulp_gf: bin cari.o
 	$(FC) $(FCFLAGS) cari.o ulp_gf.f90 -o $(BINDIR)/ulp_gf
 
-inspect: bin cari.o viscari.o
-	$(FC) $(FCFLAGS) cari.o viscari.o inspect.f90 -o $(BINDIR)/inspect
+fpinspect: bin cari.o viscari.o
+	$(FC) $(FCFLAGS) cari.o viscari.o fpinspect.f90 -o $(BINDIR)/fpinspect
 
 intinq: bin
 	$(FC) $(FCFLAGS) intinq.f90 -o $(BINDIR)/intinq
 
 realinq: bin
 	$(FC) $(FCFLAGS) realinq.f90 -o $(BINDIR)/realinq
-
-itmultest: $(OBJ)
-	$(FC) $(FCARGS) $^ itmultest.f90 $(LIB) -o $@
-
-itdivtest: $(OBJ)
-	$(FC) $(FCARGS) $^ itdivtest.f90 $(LIB) -o $@
-
-itfuntest: $(OBJ)
-	$(FC) $(FCARGS) $^ itfuntest.f90 $(LIB) -o $@
-
 
 doc:
 	doxygen Doxyfile
