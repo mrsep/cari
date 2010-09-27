@@ -18,6 +18,7 @@
 !!  EXP    EXP2   EXP10   EXPM1  LOG     LOG2    LOG10   LOG1P
 !!  SIN    COS    TAN     COT    ASIN    ACOS    ATAN    ACOT
 !!  SINH   COSH   TANH    COTH   ASINH   ACOSH   ATANH   ACOTH
+!!  ERF    ERFC
 !!
 !!
 !! Second part simple Fortran 90 implementations of the standard
@@ -64,7 +65,7 @@ public ::   sqr  , sqrt ,                                                       
             exp  , exp2 , exp10 , expm1, log   , log2  , log10 , log1p ,          &
             sin  , cos  , tan   , cot  , asin  , acos  , atan  , acot  ,          &
             sinh , cosh , tanh  , coth , asinh , acosh , atanh , acoth ,          &
-            pow  , atan2, operator(**)
+            pow  , atan2, erf   , erfc , operator(**)
             !
             ! specific names for real(prec) functions :
             !
@@ -72,7 +73,7 @@ public ::   xrsqr  , xrsqrt ,                                                   
             xrexp  , xrexp2 , xrexp10 , xrexpm1, xrlog   , xrlog2  , xrlog10 , xrlog1p ,  &
             xrsin  , xrcos  , xrtan   , xrcot  , xrasin  , xracos  , xratan  , xracot  ,  &
             xrsinh , xrcosh , xrtanh  , xrcoth , xrasinh , xracosh , xratanh , xracoth ,  &
-            xrpowr , xrpowg
+            xrpowr , xrpowg , xrerf   , xrerfc
             !
             ! specific names for type(interval) functions :
             !
@@ -80,7 +81,7 @@ public ::   xisqr  , xisqrt ,                                                   
             xiexpo , xiexp2 , xiexp10 , xiexpm1, xilog   , xilog2  , xilog10 , xilog1p ,  &
             xisin  , xicos  , xitan   , xicot  , xiasin  , xiacos  , xiatan  , xiacot  ,  &
             xisinh , xicosh , xitanh  , xicoth , xiasinh , xiacosh , xiatanh , xiacoth ,  &
-            xipowi , xipowg , xipowr  , xiatan2
+            xipowi , xipowg , xipowr  , xiatan2, xierf   , xierfc
 
 private ::  xipatan2
 
