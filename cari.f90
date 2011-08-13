@@ -1,3 +1,22 @@
+! cari.f90 - module with basic functions and constants for computer arithmetic
+!
+! Copyright (C) 2009 - 2011: Hans Peschke
+!
+! This file is part of cari - A Fortran module-library for Computer Arithmetic
+!
+! cari is free software: you can redistribute it and/or modify
+! it under the terms of the GNU General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your option) any later version.
+!
+! cari is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License
+! along with cari.  If not, see <http://www.gnu.org/licenses/>.
+
 !> module with basic functions and constants for computer arithmetic
 !!
 !> \author Hans Peschke
@@ -38,7 +57,7 @@ integer, parameter :: i64 = selected_int_kind(int(log10(2.0**63)))
 !> precision names
 character(len=2), parameter, dimension(4) :: cprecs = (/ 'sp', 'dp', 'ep', 'qp' /)
 
-!> global standard-kind parameter
+!> global standard-kind parameter for fp#
 integer, parameter :: prec = dp
 
 !> standard-kind fp constants
