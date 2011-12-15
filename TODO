@@ -34,5 +34,13 @@ Does fi_lib depends on the rounding-mode?
 interval arithmetic:
  - midpoint-radius version according to "Rump - Fast and parallel interval arithmetic" and INTLAB
  - Kahan arithmetic
+ - with 3-fp#: center, left and right relative to center
+ - interval staggered arithmetic
  - Containment Set arithmetic
  - complex intervals, complex interval standard functions
+
+Kahan's Paranoia: http://people.sc.fsu.edu/~jburkardt/f_src/paranoia/paranoia.html
+
+programs
+- string of value -> enclosing interval for all kinds
+- find ratio for fp-number (nearest, up, down rounding)

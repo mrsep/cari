@@ -1,3 +1,5 @@
+! <copyright-header>
+
 !> This module implements a complete interval arithmetic as proposed by U. Kulisch 
 !! in 2008. 
 
@@ -507,7 +509,7 @@ contains
     type(interval), intent(in)             :: x
     character(len=*), intent(in), optional :: pre, post
     logical, intent(in), optional          :: pdiam
-    character(len=prec2len(prec)) :: fm
+    character(len=prec2len(prec))          :: fm
 
     fm = prec2fmts(prec)
     if (present(pre)) write(*,fmt='(A)', advance='no') pre

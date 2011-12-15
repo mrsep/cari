@@ -11,6 +11,9 @@ private
 
 public :: bin_print, get_bits, set_bit, bin_sfmt, bin_dfmt, bin_efmt
 
+! EXPERIMENTAL !
+public :: fixpoint_plot
+
 character(len=1), parameter :: true  = 'x'  !> character for logical true
 character(len=1), parameter :: false = '.'  !> character for logical false
 
@@ -23,6 +26,10 @@ character(len=22), parameter :: bin_qfmt = ''
 
 !interface print_mant
 !  module procedure print_mant_s, print_mant_d, print_mant_e
+!end interface
+
+!interface int2bin
+!
 !end interface
 
 interface bin_print

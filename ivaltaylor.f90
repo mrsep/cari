@@ -1,55 +1,71 @@
+!> interval taylor arithmetic with forward mode for all basic mathematical
+!! operations, elementary functions as well as arbitrary compositions of them
 module ivaltaylor
 use cari, only : prec, i64
 use ivalarith
-!use fi_lib ! imported in the specific functions
+!use fi_lib ! imported in the specific functions implementations
 implicit none
 
 ! TODO
-! - errors:
-!   - left side of operator is tmp, not defined, right side is not defined
-! - defined and order should not called on temps!
-! - the Functors T and D do not recover the old max_order
+! - problems:
+!   - left side of op= is tmp, not defined, right side is not defined
 
 ! TODO to implement
 ! - expo(. , .) with all combinations of types: int, r, ival, it
-! - nth-root
-! - for more than one variable ???
+! - nth-root (integer)
+! - multivariatmultivariatee ???
+! - erf, erfc from fi_lib
+! - identity function
+
+! TODO version 2
 ! - evaluation of a function, only given by its finite taylor series in x0, 
 !   in a point x /= x0
 !   - save the original expansio point, but how does it develop through
-!   composition of it-functions???
-! erf, erfc
-! - identity function
+!     composition of it-functions??? -> inherit
+!   - assert in binary-ops that both it are developped around the same
+!     expansion-point
+! - the maximum computed order of each it has to be stored in it
+!   => no global var max_ord
 
 private
 
-private :: it_si_co, it_trig, imapping, essential_order, max_essential_order,&
-         & it_asin_naiv
+! helper functions & entities for internal use only
+private :: it_si_co, it_trig, essential_order, max_essential_order, imapping, &
+         & max_ord, unbounded_order, not_defined
 
+! for internal testing purposes or reference implementations
+private :: it_sqr_simple, it_sqrt_simple, it_asin_simple
+
+! public api: it management, types and abstract interfaces
 public :: itaylor, init, order, const, expand, free, defined, get_order,     &
-        & assignment(=), operator(+), operator(-), operator(*), operator(/), &
         & set_bounded_order, set_unbounded_order, eval, put, D, T,           &
         & get_taylor_coefficient, set_temporary, itmapping
 
-!> elementary functions
-! problems:
-public :: coth, acoth ! wolfram taylor series x=0.5 and 2.0
+! public api: binary operations
+public :: assignment(=), operator(+), operator(-), operator(*), operator(/)
 
-! functions with tested taylor series expansion
-public :: log2, log10, exp,  sqr,  sqrt,                 &
+! public api: elementary functions with tested taylor series expansion
+public ::  log, log2, log10, exp,   sqr,  sqrt,        &
         &  sin,  cos,  tan,  cot,  sinh,  cosh,  tanh, &
         & asin, acos, atan, acot, asinh, acosh, atanh
 
+! problems:
+public :: coth, acoth ! wolfram taylor series x=0.5 and 2.0
+
 !> defines the maximal order of taylor-coefficients to be calculated
 !! special-value -1 means that there is no bound in the order
+!! special-value -2 means that the it is not defined
 integer, parameter :: unbounded_order = -1
+integer, parameter :: not_defined     = -2
 integer            :: max_ord = unbounded_order
 
 !> interval taylor type
 type itaylor
   private
   type(interval), dimension(:), pointer :: cof => null()
-  logical                               :: tmp
+  logical                               :: tmp   ! result of expression?
+  type(interval)                        :: a     ! expansion point/interval !! v2
+  integer                               :: order ! forced order             !! v2
 end type itaylor
 
 !> interface to elementary interval functions implemented in fi_lib
@@ -273,6 +289,7 @@ contains
     integer, intent(in), optional :: ord
 
     it%tmp = .false.
+    it%a = izero
     if (defined(it)) call free(it)
     it%cof => null()
     if (present(ord) .and. ord >= 0) allocate(it%cof(0:ord))
@@ -298,6 +315,8 @@ contains
   function it_defined(it) result(res)
     type(itaylor), intent(in) :: it
     logical                   :: res
+
+    call tmp_free(it)
     res = associated(it%cof)
   end function it_defined
 
@@ -313,8 +332,9 @@ contains
     if (defined(it)) then
       res = ubound(it%cof, 1)
     else
-      res = -1
+      res = not_defined
     end if
+    call tmp_free(it)
   end function it_order
 
   function it_get_order() result(res)
@@ -389,6 +409,7 @@ contains
     it%cof        = izero
     it%cof(0:ord) = ione
     it%cof(0)     = c
+    it%a          = c
   end subroutine var_it_i
 
   subroutine var_it_r(it, c)
@@ -423,6 +444,7 @@ contains
     if (defined(it)) then
       it%cof(0:) = izero
       it%cof(0)  = c
+      it%a       = izero
     else
       call init(it, 0)
       it%cof(0) = c
@@ -470,6 +492,7 @@ contains
       l%cof(ord: ) = izero
       l%cof(0:ord) = e%cof(0:ord)
     end if
+    l%a = e%a
     l%tmp = .false. ! TODO
     call tmp_free(e)
   end subroutine it_assign_it
@@ -494,6 +517,7 @@ contains
 
     call init(res, order(it))
     res%cof = it%cof
+    res%a   = it%a
     call tmp_free(it)
   end function add_it
 
@@ -814,6 +838,7 @@ contains
     call tmp_free(it)
   end function get_taylor_coefficient
   
+  !> output of it to stdout
   subroutine it_put(it)
     type(itaylor), intent(in) :: it
     integer                   :: i
@@ -826,6 +851,7 @@ contains
 
 ! elemental functions
 
+  !> it for square-root
   function it_sqrt(x) result(res)
     use fi_lib, only : xisqrt
     type(itaylor), intent(in) :: x
@@ -865,7 +891,8 @@ contains
     call tmp_free(x)
   end function it_sqrt
 
-  !> only for testing it_sqrt
+  !> it for square-root
+  !! only for testing it_sqrt
   function it_sqrt_simple(x) result(res)
     use fi_lib, only : xisqrt
     type(itaylor), intent(in) :: x
@@ -891,6 +918,7 @@ contains
     call tmp_free(x)
   end function it_sqrt_simple
   
+  !> it for square
   function it_sqr(x) result(res)
     use fi_lib, only : xisqr
     type(itaylor), intent(in) :: x
@@ -923,7 +951,9 @@ contains
     call tmp_free(x)
   end function it_sqr
 
-  !> only for testing of it_sqr
+  !> it for square
+  !! straight forward implementation
+  !! only for testing of it_sqr
   function it_sqr_simple(x) result(res)
     use fi_lib, only : xisqr
     type(itaylor), intent(in) :: x
@@ -945,6 +975,7 @@ contains
     call tmp_free(x)
   end function it_sqr_simple
  
+  !> it for logarithm for base 2
   function it_log2(x) result(res)
     use fi_lib, only : xilog2, xilog
     type(itaylor), intent(in) :: x
@@ -969,6 +1000,7 @@ contains
     call tmp_free(x)
   end function it_log2
 
+  !> it for logarithm to base 10
   function it_log10(x) result(res)
     use fi_lib, only : xilog, xilog10
     type(itaylor), intent(in) :: x
@@ -993,6 +1025,8 @@ contains
     call tmp_free(x)
   end function it_log10
 
+  !> it for natural logarithm
+  !! using it_trig
   function it_log(x) result(res)
     use fi_lib, only : xilog
     type(itaylor), intent(in) :: x
@@ -1004,7 +1038,8 @@ contains
     call tmp_free(x)
   end function it_log
 
-  ! generalizable for general base: a^it
+  !> it for exponential
+  !> TODO  generalizable for general base: a^it
   function it_exp(x) result(res)
     use fi_lib, only : xiexpo
     type(itaylor), intent(in) :: x
@@ -1032,8 +1067,8 @@ contains
   !> \param x    ... argument it
   !> \param sig  ... has to be wether plus or minus [1] according to
   !!                 the derivation of cfun: D(sfun) = sig*sfun
-  !> \param sin  ... result it for sin
-  !> \param cos  ... result it for cos
+  !> \param si  ... result it for sin or sinh
+  !> \param co  ... result it for cos or cosh
   !> \param sfun ... wether sin or sinh
   !> \param cfun ... wether cos or cosh
   subroutine it_si_co(x, sig, si, co, sfun, cfun)
@@ -1082,6 +1117,8 @@ contains
     call tmp_free(x)
   end subroutine it_si_co
 
+  !> it for sinus
+  !! using it_si_co
   function it_sin(x) result(res)
     use fi_lib, only : xisin, xicos
     type(itaylor), intent(in) :: x
@@ -1093,6 +1130,8 @@ contains
     call tmp_free(x); call free(tmp)
   end function it_sin
 
+  !> it for cosinus
+  !! using it_si_co
   function it_cos(x) result(res)
     use fi_lib, only : xisin, xicos
     type(itaylor), intent(in) :: x
@@ -1104,6 +1143,8 @@ contains
     call tmp_free(x); call free(tmp)
   end function it_cos
 
+  !> it for tangens
+  !! using it_trig
   function it_tan(x) result(res)
     use fi_lib, only : xitan
     type(itaylor), intent(in) :: x
@@ -1116,6 +1157,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_tan
 
+  !> it for cotangens
+  !! using it_trig
   function it_cot(x) result(res)
     use fi_lib, only : xicot
     type(itaylor), intent(in) :: x
@@ -1128,6 +1171,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_cot
 
+  !> it for arcus sinus
+  !! using it_trig
   function it_asin(x) result(res)
     use fi_lib, only : xiasin
     type(itaylor), intent(in) :: x
@@ -1140,8 +1185,10 @@ contains
     call tmp_free(x); call free(xt)
   end function it_asin
 
-  ! only for testing it_trig
-  function it_asin_naiv(x) result(res)
+  !> it for arcus sinus
+  !! straight forward implementation
+  !! for testing it_trig
+  function it_asin_simple(x) result(res)
     use fi_lib, only : xiasin
     type(itaylor), intent(in) :: x
     type(itaylor)             :: res, g, xt
@@ -1173,8 +1220,10 @@ contains
 
     res%tmp = .true.
     call tmp_free(x, g); call free(xt)
-  end function it_asin_naiv
+  end function it_asin_simple
 
+  !> it for arcus cosinus
+  !! using it_trig
   function it_acos(x) result(res)
     use fi_lib, only : xiacos
     type(itaylor), intent(in) :: x
@@ -1187,6 +1236,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_acos
 
+  !> it for arcus tangens
+  !! usinf it_trig
   function it_atan(x) result(res)
     use fi_lib, only : xiatan
     type(itaylor), intent(in) :: x
@@ -1199,6 +1250,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_atan
 
+  !> it for arcus cotangens
+  !! usinf it_trig
   function it_acot(x) result(res)
     use fi_lib, only : xiacot
     type(itaylor), intent(in) :: x
@@ -1211,6 +1264,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_acot
 
+  !> it for sinus hyperbolicus
+  !! using it_si_co
   function it_sinh(x) result(res)
     use fi_lib, only : xisinh, xicosh
     type(itaylor), intent(in) :: x
@@ -1222,6 +1277,8 @@ contains
     call tmp_free(x); call free(tmp)
   end function it_sinh
 
+  !> it for cosinus hyperbolicus
+  !! using it_si_co
   function it_cosh(x) result(res)
     use fi_lib, only : xisinh, xicosh
     type(itaylor), intent(in) :: x
@@ -1233,6 +1290,8 @@ contains
     call tmp_free(x); call free(tmp)
   end function it_cosh
 
+  !> it for tangens hyperbolicus
+  !! using it_trig
   function it_tanh(x) result(res)
     use fi_lib, only : xitanh
     type(itaylor), intent(in) :: x
@@ -1245,6 +1304,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_tanh
 
+  !> it for cotangens hyperbolicus
+  !! using it-trig
   function it_coth(x) result(res)
     use fi_lib, only : xicoth
     type(itaylor), intent(in) :: x
@@ -1257,6 +1318,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_coth
 
+  !> it for area sinus hyperbolicus
+  !! using it-trig
   function it_asinh(x) result(res)
     use fi_lib, only : xiasinh
     type(itaylor), intent(in) :: x
@@ -1269,6 +1332,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_asinh
 
+  !> it for area cosinus hyperbolicus
+  !! using it-trig
   function it_acosh(x) result(res)
     use fi_lib, only : xiacosh
     type(itaylor), intent(in) :: x
@@ -1281,6 +1346,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_acosh
 
+  !> it for area tangens hyperbolicus
+  !! using it-trig
   function it_atanh(x) result(res)
     use fi_lib, only : xiatanh
     type(itaylor), intent(in) :: x
@@ -1293,6 +1360,8 @@ contains
     call tmp_free(x); call free(xt)
   end function it_atanh
 
+  !> it for area cotangens hyperbolicus
+  !! using it-trig
   function it_acoth(x) result(res)
     use fi_lib, only : xiacoth
     type(itaylor), intent(in) :: x
@@ -1357,11 +1426,14 @@ contains
     procedure(itmapping)       :: f
     type(interval), intent(in) :: x0
     integer, intent(in)        :: n
+    integer                    :: old_order
     type(interval)             :: res
 
-    ! TODO recover the old order!!!
+    ! recover the old order
+    old_order = get_order()
     call set_bounded_order(n)
     res = get_taylor_coefficient(f(x0), n)
+    call set_bounded_order(old_order)
   end function T
 
   !> delivers the value of the n-th derivative of f in x0
@@ -1369,14 +1441,34 @@ contains
     procedure(itmapping)       :: f
     type(interval), intent(in) :: x0
     integer, intent(in)        :: n
+    integer                    :: old_order
     type(interval)             :: res
 
-    ! TODO recover the old order!!!
+    ! recover the old order
+    old_order = get_order()
     call set_bounded_order(n)
     res = real(fac(n), prec) * get_taylor_coefficient(f(x0), n)
+    call set_bounded_order(old_order)
   end function D
 
-  ! factorial
+  !> evaluates the given taylor-coefficients as polynomial expansion
+  !! needs the original expansion point a
+  function P_horner(taylor, x) result(res)
+    type(itaylor), intent(in)  :: taylor
+    type(interval), intent(in) :: x
+    type(interval)             :: res
+    integer                    :: i, ot
+    type(interval)             :: H
+
+    ot = order(taylor)
+    H = x - taylor%a ! centring of x
+    res = taylor%cof(ot)
+    do i=ot-1, 0, -1
+      res = res * x + taylor%cof(i)
+    end do
+  end function P_horner
+
+  ! factorial with 64 Bit
   function fac(n) result(res)
     integer, intent(in) :: n
     integer(i64)        :: res, i

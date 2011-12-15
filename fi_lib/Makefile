@@ -33,7 +33,7 @@ OBJECTS = j_acos.o j_acsh.o j_acot.o j_acth.o j_asin.o j_asnh.o j_atan.o \
           q_cosh.o q_cot.o q_coth.o q_ep1.o q_epm1.o q_exp.o q_ex10.o q_exp2.o \
           q_expm.o q_glbl.o q_log.o q_log1.o q_lg10.o q_log2.o q_pred.o \
           q_rtrg.o q_sin.o q_sin1.o q_sinh.o q_sqr.o q_sqrt.o q_succ.o q_tan.o \
-          q_tanh.o q_cth1.o q_erf.o q_ari.o q_errm.o q_comp.o 
+          q_tanh.o q_cth1.o q_erf.o q_ari.o q_errm.o
 
 $(LIB): $(OBJECTS)
 	ar rv $@ $(OBJECTS)

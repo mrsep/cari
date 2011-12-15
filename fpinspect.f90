@@ -14,7 +14,7 @@ do while (q /= 42.0)
 
   write(*,*)
   write(*,*) ' === Analyse mit Single Precision ==='
-  write(*,*) 'Value:   ', s
+  write(*,fmt=sfmt) s
   write(*,*) 'Mantisse: ', fraction(s)
   write(*,*) 'Exponent: ', exponent(s)
   write(*,*) 'ulp(x):   ', ulp(s)
@@ -22,7 +22,7 @@ do while (q /= 42.0)
   
   write(*,*)
   write(*,*) ' === Analyse mit Double Precision ==='
-  write(*,*) 'Value:   ', d
+  write(*,fmt=dfmt) d
   write(*,*) 'Mantisse: ', fraction(d)
   write(*,*) 'Exponent: ', exponent(d)
   write(*,*) 'ulp(x):   ', ulp(d)
@@ -30,7 +30,7 @@ do while (q /= 42.0)
 
   write(*,*)
   write(*,*) ' === Analyse mit Quadruple Precision ==='
-  write(*,*) 'Value:   ', q
+  write(*,fmt=qfmt) q
   write(*,*) 'Mantisse: ', fraction(q)
   write(*,*) 'Exponent: ', exponent(q)
   write(*,*) 'ulp(x):   ', ulp(q)
