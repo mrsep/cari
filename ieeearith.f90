@@ -1,4 +1,4 @@
-! ieeearith.f90 - implements standard-operations with rounding control
+! ieeearith.f90 - standard mathenmatical operations with rounding control
 !
 ! Copyright (C) 2009 - 2011: Hans Peschke
 !

@@ -1,4 +1,4 @@
-! fi_lib.f90 - Module with interfaces to numerical standard functions 
+! fi_lib.f90 - interfaces to numerical standard functions 
 ! written in C from W. Kraemer and W. Hofschuster.
 !
 ! Copyright (C) 2009 - 2011: Hans Peschke

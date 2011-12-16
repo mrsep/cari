@@ -1,4 +1,4 @@
-! cari.f90 - module with basic functions and constants for computer arithmetic
+! cari.f90 - basic functions and constants for computer arithmetic
 !
 ! Copyright (C) 2009 - 2011: Hans Peschke
 !
